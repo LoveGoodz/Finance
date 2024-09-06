@@ -1,15 +1,23 @@
+using Microsoft.EntityFrameworkCore;
+
+
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
+// DbContext ayarlarýný ekleyin
+builder.Services.AddDbContext<FinanceContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Swagger ekleme (eðer gerekiyorsa)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Uygulamayý yapýlandýrýn.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

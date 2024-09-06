@@ -5,10 +5,33 @@ VisualStudioVersion = 17.11.35222.181
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Finance", "Finance\Finance.csproj", "{FC28C81D-3E65-41ED-B292-E41E0515411A}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{814EE124-1DE3-41C5-A834-4A0B08B21180}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Extra", "Extra", "{814EE124-1DE3-41C5-A834-4A0B08B21180}"
 	ProjectSection(SolutionItems) = preProject
 		..\..\..\OneDrive\Masaüstü\Finance Roadmap.pptx = ..\..\..\OneDrive\Masaüstü\Finance Roadmap.pptx
 		..\..\..\Downloads\Finance.sql = ..\..\..\Downloads\Finance.sql
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Models", "Models", "{2D42EB9D-AB91-4865-AFD6-7C870A3A5456}"
+	ProjectSection(SolutionItems) = preProject
+		ActTrans.cs = ActTrans.cs
+		Balance.cs = Balance.cs
+		Company.cs = Company.cs
+		Customer.cs = Customer.cs
+		Invoice.cs = Invoice.cs
+		InvoiceDetails.cs = InvoiceDetails.cs
+		Stock.cs = Stock.cs
+		StockTrans.cs = StockTrans.cs
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{AB5098C9-E72D-4CC6-BDB1-903DD7CD0D81}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Migrations", "Migrations", "{00D2C8F5-21A3-443B-97DC-CE744ED3A746}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Repositories", "Repositories", "{8F569690-1097-4AA4-AAB4-09808B5BF403}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{7CDDCEAE-8411-404F-B54F-60CED6015CEC}"
+	ProjectSection(SolutionItems) = preProject
+		FinanceContext.cs = FinanceContext.cs
 	EndProjectSection
 EndProject
 Global
