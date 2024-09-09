@@ -18,4 +18,10 @@
     <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="6.7.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Extra\" />
+    <Folder Include="Services\" />
+    <Folder Include="Repositories\" />
+  </ItemGroup>
+
 </Project>
