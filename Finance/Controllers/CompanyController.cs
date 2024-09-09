@@ -2,10 +2,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Finance.Controllers
 {
-    [Authorize]
+    [Authorize] // JWT yetkilendirme
     [Route("api/[controller]")]
     [ApiController]
     public class CompanyController : ControllerBase
@@ -21,7 +24,8 @@ namespace Finance.Controllers
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<Company>>> GetAllCompanies()
         {
-            return await _context.Companies.ToListAsync();
+            var companies = await _context.Companies.ToListAsync();
+            return Ok(companies);
         }
 
         // GET: api/Company/5
@@ -32,10 +36,10 @@ namespace Finance.Controllers
 
             if (company == null)
             {
-                return NotFound("Company kaydı bulunamadı.");
+                return NotFound(new { Message = "Company kaydı bulunamadı.", Status = 404 });
             }
 
-            return company;
+            return Ok(company);
         }
 
         // PUT: api/Company/5
@@ -44,7 +48,7 @@ namespace Finance.Controllers
         {
             if (id != company.ID)
             {
-                return BadRequest("ID parametresi ile Company.ID eşleşmiyor.");
+                return BadRequest(new { Message = "ID parametresi ile Company.ID eşleşmiyor.", Status = 400 });
             }
 
             _context.Entry(company).State = EntityState.Modified;
@@ -57,7 +61,7 @@ namespace Finance.Controllers
             {
                 if (!CompanyExists(id))
                 {
-                    return NotFound("Company kaydı bulunamadı.");
+                    return NotFound(new { Message = "Company kaydı bulunamadı.", Status = 404 });
                 }
                 else
                 {
@@ -85,7 +89,7 @@ namespace Finance.Controllers
             var company = await _context.Companies.FindAsync(id);
             if (company == null)
             {
-                return NotFound("Company kaydı bulunamadı.");
+                return NotFound(new { Message = "Company kaydı bulunamadı.", Status = 404 });
             }
 
             _context.Companies.Remove(company);
@@ -100,7 +104,7 @@ namespace Finance.Controllers
         {
             if (pageNumber <= 0 || pageSize <= 0)
             {
-                return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
+                return BadRequest(new { Message = "PageNumber ve PageSize sıfırdan büyük olmalıdır.", Status = 400 });
             }
 
             var query = _context.Companies.AsQueryable();
@@ -130,3 +134,4 @@ namespace Finance.Controllers
         }
     }
 }
+

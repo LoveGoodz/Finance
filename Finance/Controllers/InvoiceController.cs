@@ -1,7 +1,10 @@
 ﻿using Finance.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization; // JWT yetkilendirme için gerekli namespace
+using Microsoft.AspNetCore.Authorization;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Finance.Controllers
 {
@@ -21,7 +24,8 @@ namespace Finance.Controllers
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<Invoice>>> GetAllInvoices()
         {
-            return await _context.Invoices.ToListAsync();
+            var invoices = await _context.Invoices.ToListAsync();
+            return Ok(new { Message = "Tüm faturalar listelendi.", Data = invoices });
         }
 
         // GET: api/Invoice/5 - ID'ye göre Invoice getirir
@@ -32,19 +36,19 @@ namespace Finance.Controllers
 
             if (invoice == null)
             {
-                return NotFound("Fatura kaydı bulunamadı.");
+                return NotFound(new { Message = "Fatura kaydı bulunamadı.", Status = 404 });
             }
 
-            return invoice;
+            return Ok(invoice);
         }
 
-        // PUT: api/Invoice/5
+        // PUT: api/Invoice/5 - Mevcut bir Invoice günceller
         [HttpPut("{id}")]
         public async Task<IActionResult> PutInvoice(int id, Invoice invoice)
         {
             if (id != invoice.ID)
             {
-                return BadRequest("ID parametresi ile Invoice.ID eşleşmiyor.");
+                return BadRequest(new { Message = "ID parametresi ile Invoice.ID eşleşmiyor.", Status = 400 });
             }
 
             _context.Entry(invoice).State = EntityState.Modified;
@@ -57,7 +61,7 @@ namespace Finance.Controllers
             {
                 if (!InvoiceExists(id))
                 {
-                    return NotFound("Fatura kaydı bulunamadı.");
+                    return NotFound(new { Message = "Fatura kaydı bulunamadı.", Status = 404 });
                 }
                 else
                 {
@@ -68,7 +72,7 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // POST: api/Invoice
+        // POST: api/Invoice - Yeni Invoice ekler
         [HttpPost]
         public async Task<ActionResult<Invoice>> PostInvoice(Invoice invoice)
         {
@@ -78,14 +82,14 @@ namespace Finance.Controllers
             return CreatedAtAction(nameof(GetInvoiceById), new { id = invoice.ID }, invoice);
         }
 
-        // DELETE: api/Invoice/5
+        // DELETE: api/Invoice/5 - Belirli ID'ye sahip Invoice siler
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteInvoice(int id)
         {
             var invoice = await _context.Invoices.FindAsync(id);
             if (invoice == null)
             {
-                return NotFound("Fatura kaydı bulunamadı.");
+                return NotFound(new { Message = "Fatura kaydı bulunamadı.", Status = 404 });
             }
 
             _context.Invoices.Remove(invoice);
@@ -94,13 +98,13 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // GET: api/Invoice (Filtreleme ve Sayfalama)
+        // GET: api/Invoice - Filtreleme ve Sayfalama
         [HttpGet]
         public async Task<ActionResult> GetInvoices(string series = null, int pageNumber = 1, int pageSize = 10)
         {
             if (pageNumber <= 0 || pageSize <= 0)
             {
-                return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
+                return BadRequest(new { Message = "PageNumber ve PageSize sıfırdan büyük olmalıdır.", Status = 400 });
             }
 
             var query = _context.Invoices.AsQueryable();
@@ -130,3 +134,4 @@ namespace Finance.Controllers
         }
     }
 }
+

@@ -1,11 +1,12 @@
 ﻿using Finance.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization; 
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace Finance.Controllers
 {
-    [Authorize] 
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ActTransController : ControllerBase
@@ -17,25 +18,42 @@ namespace Finance.Controllers
             _context = context;
         }
 
+        private IActionResult UnauthorizedIfNull(string username)
+        {
+            if (username == null)
+            {
+                return Unauthorized("Kullanıcı doğrulanamadı.");
+            }
+            return Ok();
+        }
+
         // GET: api/ActTrans/all - Tüm verileri sayfalama olmadan döndürür
         [HttpGet("all")]
-        public async Task<ActionResult<IEnumerable<ActTrans>>> GetAllActTrans()
+        public async Task<IActionResult> GetAllActTrans()
         {
-            return await _context.ActTrans.ToListAsync();
+            var username = HttpContext.User.FindFirst(ClaimTypes.Name)?.Value;
+            var unauthorizedResult = UnauthorizedIfNull(username);
+            if (unauthorizedResult is UnauthorizedResult) return unauthorizedResult;
+
+            var actTrans = await _context.ActTrans.ToListAsync();
+            return Ok(actTrans);
         }
 
         // GET: api/ActTrans/5 - ID'ye göre ActTrans getirir
         [HttpGet("{id}")]
-        public async Task<ActionResult<ActTrans>> GetActTranById(int id)
+        public async Task<IActionResult> GetActTranById(int id)
         {
-            var actTran = await _context.ActTrans.FindAsync(id);
+            var username = HttpContext.User.FindFirst(ClaimTypes.Name)?.Value;
+            var unauthorizedResult = UnauthorizedIfNull(username);
+            if (unauthorizedResult is UnauthorizedResult) return unauthorizedResult;
 
+            var actTran = await _context.ActTrans.FindAsync(id);
             if (actTran == null)
             {
                 return NotFound("ActTrans kaydı bulunamadı.");
             }
 
-            return actTran;
+            return Ok(actTran);
         }
 
         // PUT: api/ActTrans/5 - Mevcut bir ActTrans günceller
@@ -46,6 +64,10 @@ namespace Finance.Controllers
             {
                 return BadRequest("ID parametresi ve ActTrans.ID eşleşmiyor.");
             }
+
+            var username = HttpContext.User.FindFirst(ClaimTypes.Name)?.Value;
+            var unauthorizedResult = UnauthorizedIfNull(username);
+            if (unauthorizedResult is UnauthorizedResult) return unauthorizedResult;
 
             _context.Entry(actTran).State = EntityState.Modified;
 
@@ -70,8 +92,12 @@ namespace Finance.Controllers
 
         // POST: api/ActTrans - Yeni ActTrans ekler
         [HttpPost]
-        public async Task<ActionResult<ActTrans>> PostActTran(ActTrans actTran)
+        public async Task<IActionResult> PostActTran(ActTrans actTran)
         {
+            var username = HttpContext.User.FindFirst(ClaimTypes.Name)?.Value;
+            var unauthorizedResult = UnauthorizedIfNull(username);
+            if (unauthorizedResult is UnauthorizedResult) return unauthorizedResult;
+
             _context.ActTrans.Add(actTran);
             await _context.SaveChangesAsync();
 
@@ -82,6 +108,10 @@ namespace Finance.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteActTran(int id)
         {
+            var username = HttpContext.User.FindFirst(ClaimTypes.Name)?.Value;
+            var unauthorizedResult = UnauthorizedIfNull(username);
+            if (unauthorizedResult is UnauthorizedResult) return unauthorizedResult;
+
             var actTran = await _context.ActTrans.FindAsync(id);
             if (actTran == null)
             {
@@ -96,12 +126,16 @@ namespace Finance.Controllers
 
         // GET: api/ActTrans - Filtreleme ve sayfalama ile ActTrans getirir
         [HttpGet]
-        public async Task<ActionResult> GetActTrans(string transactionType = null, int pageNumber = 1, int pageSize = 10)
+        public async Task<IActionResult> GetActTrans(string transactionType = null, int pageNumber = 1, int pageSize = 10)
         {
             if (pageNumber <= 0 || pageSize <= 0)
             {
                 return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
             }
+
+            var username = HttpContext.User.FindFirst(ClaimTypes.Name)?.Value;
+            var unauthorizedResult = UnauthorizedIfNull(username);
+            if (unauthorizedResult is UnauthorizedResult) return unauthorizedResult;
 
             var query = _context.ActTrans.AsQueryable();
 

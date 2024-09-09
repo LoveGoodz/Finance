@@ -4,7 +4,6 @@ using System.Text;
 using Finance.Data;  // FinanceContext'in bulunduðu namespace
 using Microsoft.EntityFrameworkCore;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
 // DbContext ayarlarýný ekleyin
@@ -91,4 +90,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-

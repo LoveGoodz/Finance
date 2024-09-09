@@ -1,7 +1,10 @@
 ﻿using Finance.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization; // JWT yetkilendirme için gerekli namespace
+using Microsoft.AspNetCore.Authorization;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Finance.Controllers
 {
@@ -21,7 +24,8 @@ namespace Finance.Controllers
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<Customer>>> GetAllCustomers()
         {
-            return await _context.Customers.ToListAsync();
+            var customers = await _context.Customers.ToListAsync();
+            return Ok(customers);
         }
 
         // GET: api/Customer/5 - ID'ye göre müşteri getirir
@@ -32,10 +36,10 @@ namespace Finance.Controllers
 
             if (customer == null)
             {
-                return NotFound("Müşteri kaydı bulunamadı.");
+                return NotFound(new { Message = "Müşteri kaydı bulunamadı.", Status = 404 });
             }
 
-            return customer;
+            return Ok(customer);
         }
 
         // PUT: api/Customer/5
@@ -44,7 +48,7 @@ namespace Finance.Controllers
         {
             if (id != customer.ID)
             {
-                return BadRequest("ID parametresi ile Customer.ID eşleşmiyor.");
+                return BadRequest(new { Message = "ID parametresi ile Customer.ID eşleşmiyor.", Status = 400 });
             }
 
             _context.Entry(customer).State = EntityState.Modified;
@@ -57,7 +61,7 @@ namespace Finance.Controllers
             {
                 if (!CustomerExists(id))
                 {
-                    return NotFound("Müşteri kaydı bulunamadı.");
+                    return NotFound(new { Message = "Müşteri kaydı bulunamadı.", Status = 404 });
                 }
                 else
                 {
@@ -85,7 +89,7 @@ namespace Finance.Controllers
             var customer = await _context.Customers.FindAsync(id);
             if (customer == null)
             {
-                return NotFound("Müşteri kaydı bulunamadı.");
+                return NotFound(new { Message = "Müşteri kaydı bulunamadı.", Status = 404 });
             }
 
             _context.Customers.Remove(customer);
@@ -100,7 +104,7 @@ namespace Finance.Controllers
         {
             if (pageNumber <= 0 || pageSize <= 0)
             {
-                return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
+                return BadRequest(new { Message = "PageNumber ve PageSize sıfırdan büyük olmalıdır.", Status = 400 });
             }
 
             var query = _context.Customers.AsQueryable();

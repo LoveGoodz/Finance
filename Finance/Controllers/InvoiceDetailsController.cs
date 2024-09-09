@@ -1,11 +1,11 @@
 ﻿using Finance.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization; // JWT yetkilendirme için gerekli namespace
+using Microsoft.AspNetCore.Authorization;
 
 namespace Finance.Controllers
 {
-    [Authorize] // Bu controller'daki tüm action metotlarına JWT doğrulaması gerekiyor
+    [Authorize] // Tüm action metotları için JWT doğrulaması gerektiriyor
     [Route("api/[controller]")]
     [ApiController]
     public class InvoiceDetailsController : ControllerBase
@@ -17,14 +17,15 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/InvoiceDetails/all - Tüm verileri döndürür, sayfalama ve filtreleme olmadan
+        // GET: api/InvoiceDetails/all - Tüm InvoiceDetails verilerini döndürür
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<InvoiceDetails>>> GetAllInvoiceDetails()
         {
-            return await _context.InvoiceDetails.ToListAsync();
+            var invoiceDetails = await _context.InvoiceDetails.ToListAsync();
+            return Ok(new { Message = "Tüm fatura detayları başarıyla getirildi.", Data = invoiceDetails });
         }
 
-        // GET: api/InvoiceDetails/5 - ID'ye göre InvoiceDetail getirir
+        // GET: api/InvoiceDetails/5 - Belirli ID'ye göre InvoiceDetail getirir
         [HttpGet("{id}")]
         public async Task<ActionResult<InvoiceDetails>> GetInvoiceDetailById(int id)
         {
@@ -32,19 +33,19 @@ namespace Finance.Controllers
 
             if (invoiceDetail == null)
             {
-                return NotFound("Fatura detayı kaydı bulunamadı.");
+                return NotFound(new { Message = "Fatura detayı bulunamadı.", Status = 404 });
             }
 
-            return invoiceDetail;
+            return Ok(new { Message = "Fatura detayı başarıyla getirildi.", Data = invoiceDetail });
         }
 
-        // PUT: api/InvoiceDetails/5
+        // PUT: api/InvoiceDetails/5 - Mevcut InvoiceDetail kaydını günceller
         [HttpPut("{id}")]
         public async Task<IActionResult> PutInvoiceDetail(int id, InvoiceDetails invoiceDetail)
         {
             if (id != invoiceDetail.ID)
             {
-                return BadRequest("ID parametresi ile InvoiceDetail.ID eşleşmiyor.");
+                return BadRequest(new { Message = "ID parametresi ile InvoiceDetail.ID eşleşmiyor.", Status = 400 });
             }
 
             _context.Entry(invoiceDetail).State = EntityState.Modified;
@@ -57,35 +58,35 @@ namespace Finance.Controllers
             {
                 if (!InvoiceDetailExists(id))
                 {
-                    return NotFound("Fatura detayı kaydı bulunamadı.");
+                    return NotFound(new { Message = "Fatura detayı kaydı bulunamadı.", Status = 404 });
                 }
                 else
                 {
-                    throw;
+                    return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "Güncelleme hatası oluştu.", Status = 500 });
                 }
             }
 
             return NoContent();
         }
 
-        // POST: api/InvoiceDetails
+        // POST: api/InvoiceDetails - Yeni InvoiceDetail kaydı ekler
         [HttpPost]
         public async Task<ActionResult<InvoiceDetails>> PostInvoiceDetail(InvoiceDetails invoiceDetail)
         {
             _context.InvoiceDetails.Add(invoiceDetail);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetInvoiceDetailById), new { id = invoiceDetail.ID }, invoiceDetail);
+            return CreatedAtAction(nameof(GetInvoiceDetailById), new { id = invoiceDetail.ID }, new { Message = "Fatura detayı başarıyla eklendi.", Data = invoiceDetail });
         }
 
-        // DELETE: api/InvoiceDetails/5
+        // DELETE: api/InvoiceDetails/5 - Belirli ID'ye sahip InvoiceDetail kaydını siler
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteInvoiceDetail(int id)
         {
             var invoiceDetail = await _context.InvoiceDetails.FindAsync(id);
             if (invoiceDetail == null)
             {
-                return NotFound("Fatura detayı kaydı bulunamadı.");
+                return NotFound(new { Message = "Fatura detayı bulunamadı.", Status = 404 });
             }
 
             _context.InvoiceDetails.Remove(invoiceDetail);
@@ -94,13 +95,13 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // GET: api/InvoiceDetails (Filtreleme ve Sayfalama)
+        // GET: api/InvoiceDetails - Filtreleme ve sayfalama ile InvoiceDetail verilerini getirir
         [HttpGet]
         public async Task<ActionResult> GetInvoiceDetails(int? stockId = null, int pageNumber = 1, int pageSize = 10)
         {
             if (pageNumber <= 0 || pageSize <= 0)
             {
-                return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
+                return BadRequest(new { Message = "PageNumber ve PageSize sıfırdan büyük olmalıdır.", Status = 400 });
             }
 
             var query = _context.InvoiceDetails.AsQueryable();
@@ -130,4 +131,3 @@ namespace Finance.Controllers
         }
     }
 }
-

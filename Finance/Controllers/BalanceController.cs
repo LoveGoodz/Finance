@@ -1,11 +1,14 @@
 ﻿using Finance.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization; // JWT yetkilendirme için gerekli namespace
+using Microsoft.AspNetCore.Authorization;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Finance.Controllers
 {
-    [Authorize] // Bu controller'daki tüm action metotlarına JWT doğrulaması gerekiyor
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class BalanceController : ControllerBase
@@ -32,10 +35,10 @@ namespace Finance.Controllers
 
             if (balance == null)
             {
-                return NotFound("Balance kaydı bulunamadı.");
+                return NotFound(new { Message = "Balance kaydı bulunamadı.", Status = 404 });
             }
 
-            return balance;
+            return Ok(balance);
         }
 
         // PUT: api/Balance/5 - Mevcut bir Balance günceller
@@ -44,7 +47,7 @@ namespace Finance.Controllers
         {
             if (id != balance.ID)
             {
-                return BadRequest("ID parametresi ve Balance.ID eşleşmiyor.");
+                return BadRequest(new { Message = "ID parametresi ve Balance.ID eşleşmiyor.", Status = 400 });
             }
 
             _context.Entry(balance).State = EntityState.Modified;
@@ -57,7 +60,7 @@ namespace Finance.Controllers
             {
                 if (!BalanceExists(id))
                 {
-                    return NotFound("Balance kaydı bulunamadı.");
+                    return NotFound(new { Message = "Balance kaydı bulunamadı.", Status = 404 });
                 }
                 else
                 {
@@ -85,7 +88,7 @@ namespace Finance.Controllers
             var balance = await _context.Balances.FindAsync(id);
             if (balance == null)
             {
-                return NotFound("Balance kaydı bulunamadı.");
+                return NotFound(new { Message = "Balance kaydı bulunamadı.", Status = 404 });
             }
 
             _context.Balances.Remove(balance);
@@ -94,13 +97,13 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // GET: api/Balance (Sayfalama ve filtreleme)
+        // GET: api/Balance - Sayfalama ve filtreleme ile Balance getirir
         [HttpGet]
         public async Task<ActionResult> GetBalances(int? companyId = null, int pageNumber = 1, int pageSize = 10)
         {
             if (pageNumber <= 0 || pageSize <= 0)
             {
-                return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
+                return BadRequest(new { Message = "PageNumber ve PageSize sıfırdan büyük olmalıdır.", Status = 400 });
             }
 
             var query = _context.Balances.AsQueryable();

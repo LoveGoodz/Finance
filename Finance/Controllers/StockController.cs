@@ -17,14 +17,15 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/Stock/all - Tüm verileri listeler, sayfalama ve filtreleme olmadan
+        // GET: api/Stock/all - Tüm stokları listeler, sayfalama ve filtreleme olmadan
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<Stock>>> GetAllStocks()
         {
-            return await _context.Stocks.ToListAsync();
+            var stocks = await _context.Stocks.ToListAsync();
+            return Ok(new { Message = "Tüm stoklar başarıyla getirildi.", Data = stocks });
         }
 
-        // GET: api/Stock/5 - ID'ye göre stok getirir
+        // GET: api/Stock/5 - Belirli ID'ye göre stok getirir
         [HttpGet("{id}")]
         public async Task<ActionResult<Stock>> GetStockById(int id)
         {
@@ -32,19 +33,19 @@ namespace Finance.Controllers
 
             if (stock == null)
             {
-                return NotFound("Stok kaydı bulunamadı.");
+                return NotFound(new { Message = "Stok kaydı bulunamadı.", Status = 404 });
             }
 
-            return stock;
+            return Ok(new { Message = "Stok başarıyla getirildi.", Data = stock });
         }
 
-        // PUT: api/Stock/5
+        // PUT: api/Stock/5 - Mevcut stok kaydını günceller
         [HttpPut("{id}")]
         public async Task<IActionResult> PutStock(int id, Stock stock)
         {
             if (id != stock.ID)
             {
-                return BadRequest("ID parametresi ile Stock.ID eşleşmiyor.");
+                return BadRequest(new { Message = "ID parametresi ile Stock.ID eşleşmiyor.", Status = 400 });
             }
 
             _context.Entry(stock).State = EntityState.Modified;
@@ -57,7 +58,7 @@ namespace Finance.Controllers
             {
                 if (!StockExists(id))
                 {
-                    return NotFound("Stok kaydı bulunamadı.");
+                    return NotFound(new { Message = "Stok kaydı bulunamadı.", Status = 404 });
                 }
                 else
                 {
@@ -68,24 +69,24 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // POST: api/Stock
+        // POST: api/Stock - Yeni stok kaydı ekler
         [HttpPost]
         public async Task<ActionResult<Stock>> PostStock(Stock stock)
         {
             _context.Stocks.Add(stock);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetStockById), new { id = stock.ID }, stock);
+            return CreatedAtAction(nameof(GetStockById), new { id = stock.ID }, new { Message = "Stok başarıyla eklendi.", Data = stock });
         }
 
-        // DELETE: api/Stock/5
+        // DELETE: api/Stock/5 - Belirli ID'ye sahip stok kaydını siler
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteStock(int id)
         {
             var stock = await _context.Stocks.FindAsync(id);
             if (stock == null)
             {
-                return NotFound("Stok kaydı bulunamadı.");
+                return NotFound(new { Message = "Stok kaydı bulunamadı.", Status = 404 });
             }
 
             _context.Stocks.Remove(stock);
@@ -94,13 +95,13 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // GET: api/Stock (Filtreleme ve Sayfalama)
+        // GET: api/Stock - Filtreleme ve sayfalama ile stokları getirir
         [HttpGet]
         public async Task<ActionResult> GetStocks(string name = null, int pageNumber = 1, int pageSize = 10)
         {
             if (pageNumber <= 0 || pageSize <= 0)
             {
-                return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
+                return BadRequest(new { Message = "PageNumber ve PageSize sıfırdan büyük olmalıdır.", Status = 400 });
             }
 
             var query = _context.Stocks.AsQueryable();
@@ -130,4 +131,3 @@ namespace Finance.Controllers
         }
     }
 }
-
