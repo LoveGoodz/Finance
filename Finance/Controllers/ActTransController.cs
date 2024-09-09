@@ -1,9 +1,11 @@
 ﻿using Finance.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization; 
 
 namespace Finance.Controllers
 {
+    [Authorize] 
     [Route("api/[controller]")]
     [ApiController]
     public class ActTransController : ControllerBase
@@ -15,15 +17,14 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/ActTrans
+        // GET: api/ActTrans/all - Tüm verileri sayfalama olmadan döndürür
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<ActTrans>>> GetAllActTrans()
         {
-            // Tüm verileri sayfalama olmadan döndürür
             return await _context.ActTrans.ToListAsync();
         }
 
-        // GET: api/ActTrans/5
+        // GET: api/ActTrans/5 - ID'ye göre ActTrans getirir
         [HttpGet("{id}")]
         public async Task<ActionResult<ActTrans>> GetActTranById(int id)
         {
@@ -31,13 +32,13 @@ namespace Finance.Controllers
 
             if (actTran == null)
             {
-                return NotFound();
+                return NotFound("ActTrans kaydı bulunamadı.");
             }
 
             return actTran;
         }
 
-        // PUT: api/ActTrans/5
+        // PUT: api/ActTrans/5 - Mevcut bir ActTrans günceller
         [HttpPut("{id}")]
         public async Task<IActionResult> PutActTran(int id, ActTrans actTran)
         {
@@ -67,18 +68,17 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // POST: api/ActTrans
+        // POST: api/ActTrans - Yeni ActTrans ekler
         [HttpPost]
         public async Task<ActionResult<ActTrans>> PostActTran(ActTrans actTran)
         {
             _context.ActTrans.Add(actTran);
             await _context.SaveChangesAsync();
 
-            // Cache işlemi yapılacaksa burada cache temizlenebilir
             return CreatedAtAction(nameof(GetActTranById), new { id = actTran.ID }, actTran);
         }
 
-        // DELETE: api/ActTrans/5
+        // DELETE: api/ActTrans/5 - Belirli ID'ye sahip ActTrans siler
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteActTran(int id)
         {
@@ -94,7 +94,7 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // GET: api/ActTrans (Filtreleme ve Sayfalama)
+        // GET: api/ActTrans - Filtreleme ve sayfalama ile ActTrans getirir
         [HttpGet]
         public async Task<ActionResult> GetActTrans(string transactionType = null, int pageNumber = 1, int pageSize = 10)
         {
@@ -105,7 +105,7 @@ namespace Finance.Controllers
 
             var query = _context.ActTrans.AsQueryable();
 
-            // TransactionType filtreleme işlemi
+            // TransactionType ile filtreleme
             if (!string.IsNullOrEmpty(transactionType))
             {
                 query = query.Where(at => at.TransactionType.Contains(transactionType));

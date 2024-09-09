@@ -1,9 +1,11 @@
 ﻿using Finance.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization; // JWT yetkilendirme için gerekli namespace
 
 namespace Finance.Controllers
 {
+    [Authorize] // Bu controller'daki tüm action metotlarına JWT doğrulaması gerekiyor
     [Route("api/[controller]")]
     [ApiController]
     public class BalanceController : ControllerBase
@@ -36,7 +38,7 @@ namespace Finance.Controllers
             return balance;
         }
 
-        // PUT: api/Balance/5
+        // PUT: api/Balance/5 - Mevcut bir Balance günceller
         [HttpPut("{id}")]
         public async Task<IActionResult> PutBalance(int id, Balance balance)
         {
@@ -66,7 +68,7 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // POST: api/Balance
+        // POST: api/Balance - Yeni Balance ekler
         [HttpPost]
         public async Task<ActionResult<Balance>> PostBalance(Balance balance)
         {
@@ -76,7 +78,7 @@ namespace Finance.Controllers
             return CreatedAtAction(nameof(GetBalanceById), new { id = balance.ID }, balance);
         }
 
-        // DELETE: api/Balance/5
+        // DELETE: api/Balance/5 - Belirli ID'ye sahip Balance'ı siler
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBalance(int id)
         {

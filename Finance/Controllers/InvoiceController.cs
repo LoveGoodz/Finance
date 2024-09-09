@@ -1,9 +1,11 @@
 ﻿using Finance.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization; // JWT yetkilendirme için gerekli namespace
 
 namespace Finance.Controllers
 {
+    [Authorize] // Bu controller'daki tüm action metotlarına JWT doğrulaması gerekiyor
     [Route("api/[controller]")]
     [ApiController]
     public class InvoiceController : ControllerBase

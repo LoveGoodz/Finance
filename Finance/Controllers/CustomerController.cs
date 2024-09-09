@@ -1,9 +1,11 @@
 ﻿using Finance.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization; // JWT yetkilendirme için gerekli namespace
 
 namespace Finance.Controllers
 {
+    [Authorize] // Bu controller'daki tüm action metotlarına JWT doğrulaması gerekiyor
     [Route("api/[controller]")]
     [ApiController]
     public class CustomerController : ControllerBase
@@ -15,7 +17,7 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/Customer/all - Tüm verileri döndürür, sayfalama ve filtreleme yok
+        // GET: api/Customer/all - Tüm verileri döndürür, sayfalama ve filtreleme olmadan
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<Customer>>> GetAllCustomers()
         {

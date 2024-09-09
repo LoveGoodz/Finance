@@ -1,9 +1,11 @@
 ﻿using Finance.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Finance.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class StockController : ControllerBase
@@ -128,3 +130,4 @@ namespace Finance.Controllers
         }
     }
 }
+
