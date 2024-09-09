@@ -15,22 +15,22 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/Balance
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Balance>>> GetBalances()
+        // GET: api/Balance/all - Tüm verileri listeler, sayfalama ve filtreleme olmadan
+        [HttpGet("all")]
+        public async Task<ActionResult<IEnumerable<Balance>>> GetAllBalances()
         {
             return await _context.Balances.ToListAsync();
         }
 
-        // GET: api/Balance/5
+        // GET: api/Balance/5 - ID'ye göre Balance getirir
         [HttpGet("{id}")]
-        public async Task<ActionResult<Balance>> GetBalance(int id)
+        public async Task<ActionResult<Balance>> GetBalanceById(int id)
         {
             var balance = await _context.Balances.FindAsync(id);
 
             if (balance == null)
             {
-                return NotFound();
+                return NotFound("Balance kaydı bulunamadı.");
             }
 
             return balance;
@@ -42,7 +42,7 @@ namespace Finance.Controllers
         {
             if (id != balance.ID)
             {
-                return BadRequest();
+                return BadRequest("ID parametresi ve Balance.ID eşleşmiyor.");
             }
 
             _context.Entry(balance).State = EntityState.Modified;
@@ -55,7 +55,7 @@ namespace Finance.Controllers
             {
                 if (!BalanceExists(id))
                 {
-                    return NotFound();
+                    return NotFound("Balance kaydı bulunamadı.");
                 }
                 else
                 {
@@ -73,7 +73,7 @@ namespace Finance.Controllers
             _context.Balances.Add(balance);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetBalance", new { id = balance.ID }, balance);
+            return CreatedAtAction(nameof(GetBalanceById), new { id = balance.ID }, balance);
         }
 
         // DELETE: api/Balance/5
@@ -83,7 +83,7 @@ namespace Finance.Controllers
             var balance = await _context.Balances.FindAsync(id);
             if (balance == null)
             {
-                return NotFound();
+                return NotFound("Balance kaydı bulunamadı.");
             }
 
             _context.Balances.Remove(balance);
@@ -92,22 +92,27 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        private bool BalanceExists(int id)
-        {
-            return _context.Balances.Any(e => e.ID == id);
-        }
-
+        // GET: api/Balance (Sayfalama ve filtreleme)
         [HttpGet]
         public async Task<ActionResult> GetBalances(int? companyId = null, int pageNumber = 1, int pageSize = 10)
         {
+            if (pageNumber <= 0 || pageSize <= 0)
+            {
+                return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
+            }
+
             var query = _context.Balances.AsQueryable();
 
+            // companyId'ye göre filtreleme
             if (companyId.HasValue)
             {
                 query = query.Where(b => b.CompanyID == companyId);
             }
 
+            // Toplam kayıt sayısı
             var totalRecords = await query.CountAsync();
+
+            // Sayfalama işlemi
             var balances = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -116,5 +121,10 @@ namespace Finance.Controllers
             return Ok(new { TotalRecords = totalRecords, Data = balances });
         }
 
+        // Veritabanında Balance olup olmadığını kontrol eden yardımcı metot
+        private bool BalanceExists(int id)
+        {
+            return _context.Balances.Any(e => e.ID == id);
+        }
     }
 }

@@ -15,22 +15,22 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/Company
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Company>>> GetCompanies()
+        // GET: api/Company/all
+        [HttpGet("all")]
+        public async Task<ActionResult<IEnumerable<Company>>> GetAllCompanies()
         {
             return await _context.Companies.ToListAsync();
         }
 
         // GET: api/Company/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Company>> GetCompany(int id)
+        public async Task<ActionResult<Company>> GetCompanyById(int id)
         {
             var company = await _context.Companies.FindAsync(id);
 
             if (company == null)
             {
-                return NotFound();
+                return NotFound("Company kaydı bulunamadı.");
             }
 
             return company;
@@ -42,7 +42,7 @@ namespace Finance.Controllers
         {
             if (id != company.ID)
             {
-                return BadRequest();
+                return BadRequest("ID parametresi ile Company.ID eşleşmiyor.");
             }
 
             _context.Entry(company).State = EntityState.Modified;
@@ -55,7 +55,7 @@ namespace Finance.Controllers
             {
                 if (!CompanyExists(id))
                 {
-                    return NotFound();
+                    return NotFound("Company kaydı bulunamadı.");
                 }
                 else
                 {
@@ -73,7 +73,7 @@ namespace Finance.Controllers
             _context.Companies.Add(company);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetCompany", new { id = company.ID }, company);
+            return CreatedAtAction(nameof(GetCompanyById), new { id = company.ID }, company);
         }
 
         // DELETE: api/Company/5
@@ -83,7 +83,7 @@ namespace Finance.Controllers
             var company = await _context.Companies.FindAsync(id);
             if (company == null)
             {
-                return NotFound();
+                return NotFound("Company kaydı bulunamadı.");
             }
 
             _context.Companies.Remove(company);
@@ -92,22 +92,27 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        private bool CompanyExists(int id)
-        {
-            return _context.Companies.Any(e => e.ID == id);
-        }
-
+        // GET: api/Company (Sayfalama ve Filtreleme)
         [HttpGet]
         public async Task<ActionResult> GetCompanies(string name = null, int pageNumber = 1, int pageSize = 10)
         {
+            if (pageNumber <= 0 || pageSize <= 0)
+            {
+                return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
+            }
+
             var query = _context.Companies.AsQueryable();
 
+            // İsimle filtreleme
             if (!string.IsNullOrEmpty(name))
             {
                 query = query.Where(c => c.Name.Contains(name));
             }
 
+            // Toplam kayıt sayısı
             var totalRecords = await query.CountAsync();
+
+            // Sayfalama işlemi
             var companies = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -116,5 +121,10 @@ namespace Finance.Controllers
             return Ok(new { TotalRecords = totalRecords, Data = companies });
         }
 
+        // Veritabanında Company kaydı olup olmadığını kontrol eden yardımcı metot
+        private bool CompanyExists(int id)
+        {
+            return _context.Companies.Any(e => e.ID == id);
+        }
     }
 }

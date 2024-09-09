@@ -15,22 +15,22 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/Stock
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Stock>>> GetStocks()
+        // GET: api/Stock/all - Tüm verileri listeler, sayfalama ve filtreleme olmadan
+        [HttpGet("all")]
+        public async Task<ActionResult<IEnumerable<Stock>>> GetAllStocks()
         {
             return await _context.Stocks.ToListAsync();
         }
 
-        // GET: api/Stock/5
+        // GET: api/Stock/5 - ID'ye göre stok getirir
         [HttpGet("{id}")]
-        public async Task<ActionResult<Stock>> GetStock(int id)
+        public async Task<ActionResult<Stock>> GetStockById(int id)
         {
             var stock = await _context.Stocks.FindAsync(id);
 
             if (stock == null)
             {
-                return NotFound();
+                return NotFound("Stok kaydı bulunamadı.");
             }
 
             return stock;
@@ -42,7 +42,7 @@ namespace Finance.Controllers
         {
             if (id != stock.ID)
             {
-                return BadRequest();
+                return BadRequest("ID parametresi ile Stock.ID eşleşmiyor.");
             }
 
             _context.Entry(stock).State = EntityState.Modified;
@@ -55,7 +55,7 @@ namespace Finance.Controllers
             {
                 if (!StockExists(id))
                 {
-                    return NotFound();
+                    return NotFound("Stok kaydı bulunamadı.");
                 }
                 else
                 {
@@ -73,7 +73,7 @@ namespace Finance.Controllers
             _context.Stocks.Add(stock);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetStock", new { id = stock.ID }, stock);
+            return CreatedAtAction(nameof(GetStockById), new { id = stock.ID }, stock);
         }
 
         // DELETE: api/Stock/5
@@ -83,7 +83,7 @@ namespace Finance.Controllers
             var stock = await _context.Stocks.FindAsync(id);
             if (stock == null)
             {
-                return NotFound();
+                return NotFound("Stok kaydı bulunamadı.");
             }
 
             _context.Stocks.Remove(stock);
@@ -92,22 +92,27 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        private bool StockExists(int id)
-        {
-            return _context.Stocks.Any(e => e.ID == id);
-        }
-
+        // GET: api/Stock (Filtreleme ve Sayfalama)
         [HttpGet]
         public async Task<ActionResult> GetStocks(string name = null, int pageNumber = 1, int pageSize = 10)
         {
+            if (pageNumber <= 0 || pageSize <= 0)
+            {
+                return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
+            }
+
             var query = _context.Stocks.AsQueryable();
 
+            // Stok ismi ile filtreleme
             if (!string.IsNullOrEmpty(name))
             {
                 query = query.Where(s => s.Name.Contains(name));
             }
 
+            // Toplam kayıt sayısı
             var totalRecords = await query.CountAsync();
+
+            // Sayfalama işlemi
             var stocks = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -116,6 +121,10 @@ namespace Finance.Controllers
             return Ok(new { TotalRecords = totalRecords, Data = stocks });
         }
 
-
+        // Veritabanında stok kaydı olup olmadığını kontrol eden yardımcı metot
+        private bool StockExists(int id)
+        {
+            return _context.Stocks.Any(e => e.ID == id);
+        }
     }
 }

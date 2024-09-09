@@ -15,22 +15,22 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/Customer
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Customer>>> GetCustomers()
+        // GET: api/Customer/all - Tüm verileri döndürür, sayfalama ve filtreleme yok
+        [HttpGet("all")]
+        public async Task<ActionResult<IEnumerable<Customer>>> GetAllCustomers()
         {
             return await _context.Customers.ToListAsync();
         }
 
-        // GET: api/Customer/5
+        // GET: api/Customer/5 - ID'ye göre müşteri getirir
         [HttpGet("{id}")]
-        public async Task<ActionResult<Customer>> GetCustomer(int id)
+        public async Task<ActionResult<Customer>> GetCustomerById(int id)
         {
             var customer = await _context.Customers.FindAsync(id);
 
             if (customer == null)
             {
-                return NotFound();
+                return NotFound("Müşteri kaydı bulunamadı.");
             }
 
             return customer;
@@ -42,7 +42,7 @@ namespace Finance.Controllers
         {
             if (id != customer.ID)
             {
-                return BadRequest();
+                return BadRequest("ID parametresi ile Customer.ID eşleşmiyor.");
             }
 
             _context.Entry(customer).State = EntityState.Modified;
@@ -55,7 +55,7 @@ namespace Finance.Controllers
             {
                 if (!CustomerExists(id))
                 {
-                    return NotFound();
+                    return NotFound("Müşteri kaydı bulunamadı.");
                 }
                 else
                 {
@@ -73,7 +73,7 @@ namespace Finance.Controllers
             _context.Customers.Add(customer);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetCustomer", new { id = customer.ID }, customer);
+            return CreatedAtAction(nameof(GetCustomerById), new { id = customer.ID }, customer);
         }
 
         // DELETE: api/Customer/5
@@ -83,7 +83,7 @@ namespace Finance.Controllers
             var customer = await _context.Customers.FindAsync(id);
             if (customer == null)
             {
-                return NotFound();
+                return NotFound("Müşteri kaydı bulunamadı.");
             }
 
             _context.Customers.Remove(customer);
@@ -92,29 +92,39 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        private bool CustomerExists(int id)
-        {
-            return _context.Customers.Any(e => e.ID == id);
-        }
-        
+        // GET: api/Customer (Filtreleme ve Sayfalama)
         [HttpGet]
-        public async Task<ActionResult> GetStocks(string name = null, int pageNumber = 1, int pageSize = 10)
+        public async Task<ActionResult> GetCustomers(string name = null, int pageNumber = 1, int pageSize = 10)
         {
-            var query = _context.Stocks.AsQueryable();
-
-            if (!string.IsNullOrEmpty(name))
+            if (pageNumber <= 0 || pageSize <= 0)
             {
-                query = query.Where(s => s.Name.Contains(name));
+                return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
             }
 
+            var query = _context.Customers.AsQueryable();
+
+            // İsimle filtreleme
+            if (!string.IsNullOrEmpty(name))
+            {
+                query = query.Where(c => c.Name.Contains(name));
+            }
+
+            // Toplam kayıt sayısı
             var totalRecords = await query.CountAsync();
-            var stocks = await query
+
+            // Sayfalama işlemi
+            var customers = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
 
-            return Ok(new { TotalRecords = totalRecords, Data = stocks });
+            return Ok(new { TotalRecords = totalRecords, Data = customers });
         }
 
+        // Veritabanında müşteri olup olmadığını kontrol eden yardımcı metot
+        private bool CustomerExists(int id)
+        {
+            return _context.Customers.Any(e => e.ID == id);
+        }
     }
 }

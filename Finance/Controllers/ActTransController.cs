@@ -16,15 +16,16 @@ namespace Finance.Controllers
         }
 
         // GET: api/ActTrans
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<ActTrans>>> GetActTrans()
+        [HttpGet("all")]
+        public async Task<ActionResult<IEnumerable<ActTrans>>> GetAllActTrans()
         {
+            // Tüm verileri sayfalama olmadan döndürür
             return await _context.ActTrans.ToListAsync();
         }
 
         // GET: api/ActTrans/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<ActTrans>> GetActTran(int id)
+        public async Task<ActionResult<ActTrans>> GetActTranById(int id)
         {
             var actTran = await _context.ActTrans.FindAsync(id);
 
@@ -42,7 +43,7 @@ namespace Finance.Controllers
         {
             if (id != actTran.ID)
             {
-                return BadRequest();
+                return BadRequest("ID parametresi ve ActTrans.ID eşleşmiyor.");
             }
 
             _context.Entry(actTran).State = EntityState.Modified;
@@ -55,7 +56,7 @@ namespace Finance.Controllers
             {
                 if (!ActTranExists(id))
                 {
-                    return NotFound();
+                    return NotFound("ActTrans kaydı bulunamadı.");
                 }
                 else
                 {
@@ -73,7 +74,8 @@ namespace Finance.Controllers
             _context.ActTrans.Add(actTran);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetActTran", new { id = actTran.ID }, actTran);
+            // Cache işlemi yapılacaksa burada cache temizlenebilir
+            return CreatedAtAction(nameof(GetActTranById), new { id = actTran.ID }, actTran);
         }
 
         // DELETE: api/ActTrans/5
@@ -83,7 +85,7 @@ namespace Finance.Controllers
             var actTran = await _context.ActTrans.FindAsync(id);
             if (actTran == null)
             {
-                return NotFound();
+                return NotFound("ActTrans kaydı bulunamadı.");
             }
 
             _context.ActTrans.Remove(actTran);
@@ -92,22 +94,27 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        private bool ActTranExists(int id)
-        {
-            return _context.ActTrans.Any(e => e.ID == id);
-        }
-
+        // GET: api/ActTrans (Filtreleme ve Sayfalama)
         [HttpGet]
         public async Task<ActionResult> GetActTrans(string transactionType = null, int pageNumber = 1, int pageSize = 10)
         {
+            if (pageNumber <= 0 || pageSize <= 0)
+            {
+                return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
+            }
+
             var query = _context.ActTrans.AsQueryable();
 
+            // TransactionType filtreleme işlemi
             if (!string.IsNullOrEmpty(transactionType))
             {
                 query = query.Where(at => at.TransactionType.Contains(transactionType));
             }
 
+            // Toplam kayıt sayısı
             var totalRecords = await query.CountAsync();
+
+            // Sayfalama işlemi
             var actTrans = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -116,5 +123,10 @@ namespace Finance.Controllers
             return Ok(new { TotalRecords = totalRecords, Data = actTrans });
         }
 
+        // Veritabanında ActTrans olup olmadığını kontrol eden yardımcı metot
+        private bool ActTranExists(int id)
+        {
+            return _context.ActTrans.Any(e => e.ID == id);
+        }
     }
 }

@@ -15,22 +15,22 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/InvoiceDetails
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<InvoiceDetails>>> GetInvoiceDetails()
+        // GET: api/InvoiceDetails/all - Tüm verileri döndürür, sayfalama ve filtreleme olmadan
+        [HttpGet("all")]
+        public async Task<ActionResult<IEnumerable<InvoiceDetails>>> GetAllInvoiceDetails()
         {
             return await _context.InvoiceDetails.ToListAsync();
         }
 
-        // GET: api/InvoiceDetails/5
+        // GET: api/InvoiceDetails/5 - ID'ye göre InvoiceDetail getirir
         [HttpGet("{id}")]
-        public async Task<ActionResult<InvoiceDetails>> GetInvoiceDetail(int id)
+        public async Task<ActionResult<InvoiceDetails>> GetInvoiceDetailById(int id)
         {
             var invoiceDetail = await _context.InvoiceDetails.FindAsync(id);
 
             if (invoiceDetail == null)
             {
-                return NotFound();
+                return NotFound("Fatura detayı kaydı bulunamadı.");
             }
 
             return invoiceDetail;
@@ -42,7 +42,7 @@ namespace Finance.Controllers
         {
             if (id != invoiceDetail.ID)
             {
-                return BadRequest();
+                return BadRequest("ID parametresi ile InvoiceDetail.ID eşleşmiyor.");
             }
 
             _context.Entry(invoiceDetail).State = EntityState.Modified;
@@ -55,7 +55,7 @@ namespace Finance.Controllers
             {
                 if (!InvoiceDetailExists(id))
                 {
-                    return NotFound();
+                    return NotFound("Fatura detayı kaydı bulunamadı.");
                 }
                 else
                 {
@@ -73,7 +73,7 @@ namespace Finance.Controllers
             _context.InvoiceDetails.Add(invoiceDetail);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetInvoiceDetail", new { id = invoiceDetail.ID }, invoiceDetail);
+            return CreatedAtAction(nameof(GetInvoiceDetailById), new { id = invoiceDetail.ID }, invoiceDetail);
         }
 
         // DELETE: api/InvoiceDetails/5
@@ -83,7 +83,7 @@ namespace Finance.Controllers
             var invoiceDetail = await _context.InvoiceDetails.FindAsync(id);
             if (invoiceDetail == null)
             {
-                return NotFound();
+                return NotFound("Fatura detayı kaydı bulunamadı.");
             }
 
             _context.InvoiceDetails.Remove(invoiceDetail);
@@ -92,22 +92,27 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        private bool InvoiceDetailExists(int id)
-        {
-            return _context.InvoiceDetails.Any(e => e.ID == id);
-        }
-
+        // GET: api/InvoiceDetails (Filtreleme ve Sayfalama)
         [HttpGet]
         public async Task<ActionResult> GetInvoiceDetails(int? stockId = null, int pageNumber = 1, int pageSize = 10)
         {
+            if (pageNumber <= 0 || pageSize <= 0)
+            {
+                return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
+            }
+
             var query = _context.InvoiceDetails.AsQueryable();
 
+            // StockID ile filtreleme
             if (stockId.HasValue)
             {
                 query = query.Where(id => id.StockID == stockId);
             }
 
+            // Toplam kayıt sayısı
             var totalRecords = await query.CountAsync();
+
+            // Sayfalama işlemi
             var invoiceDetails = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -116,5 +121,10 @@ namespace Finance.Controllers
             return Ok(new { TotalRecords = totalRecords, Data = invoiceDetails });
         }
 
+        // Veritabanında InvoiceDetail kaydı olup olmadığını kontrol eden yardımcı metot
+        private bool InvoiceDetailExists(int id)
+        {
+            return _context.InvoiceDetails.Any(e => e.ID == id);
+        }
     }
 }
