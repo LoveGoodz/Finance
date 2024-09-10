@@ -1,12 +1,16 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 using System.Text;
-using Finance.Data;  // FinanceContext'in bulunduðu namespace
+using Finance.Data;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// DbContext ayarlarýný ekleyin
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect("localhost:6379"));
+
+
 builder.Services.AddDbContext<FinanceContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -33,7 +37,6 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// Swagger için JWT yetkilendirme tanýmýný ekleyin
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
@@ -84,7 +87,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseAuthentication(); // JWT doðrulama middleware
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
