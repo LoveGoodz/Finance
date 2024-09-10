@@ -2,9 +2,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using StackExchange.Redis; // Redis kütüphanesi
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json;
+using System.Security.Claims; // JSON serileştirme/deserileştirme
 
 namespace Finance.Controllers
 {
@@ -14,17 +17,37 @@ namespace Finance.Controllers
     public class CompanyController : ControllerBase
     {
         private readonly FinanceContext _context;
+        private readonly IDatabase _redisDb; // Redis veri tabanı için
 
-        public CompanyController(FinanceContext context)
+        public CompanyController(FinanceContext context, IConnectionMultiplexer redis)
         {
             _context = context;
+            _redisDb = redis.GetDatabase(); // Redis veritabanı alınıyor
         }
 
         // GET: api/Company/all
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<Company>>> GetAllCompanies()
         {
+            var username = HttpContext.User.FindFirst(ClaimTypes.Name)?.Value;
+            if (username == null)
+            {
+                return Unauthorized(new { Message = "Kullanıcı doğrulanamadı.", Status = 401 });
+            }
+
+            string cacheKey = "all_companies";
+            string cachedData = await _redisDb.StringGetAsync(cacheKey);
+
+            if (!string.IsNullOrEmpty(cachedData))
+            {
+                var cachedCompanies = JsonSerializer.Deserialize<IEnumerable<Company>>(cachedData);
+                return Ok(cachedCompanies);
+            }
+
             var companies = await _context.Companies.ToListAsync();
+            var serializedCompanies = JsonSerializer.Serialize(companies);
+            await _redisDb.StringSetAsync(cacheKey, serializedCompanies, TimeSpan.FromMinutes(5)); // 5 dakika cache'te tut
+
             return Ok(companies);
         }
 
@@ -32,12 +55,29 @@ namespace Finance.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Company>> GetCompanyById(int id)
         {
-            var company = await _context.Companies.FindAsync(id);
+            var username = HttpContext.User.FindFirst(ClaimTypes.Name)?.Value;
+            if (username == null)
+            {
+                return Unauthorized(new { Message = "Kullanıcı doğrulanamadı.", Status = 401 });
+            }
 
+            string cacheKey = $"company_{id}";
+            string cachedData = await _redisDb.StringGetAsync(cacheKey);
+
+            if (!string.IsNullOrEmpty(cachedData))
+            {
+                var cachedCompany = JsonSerializer.Deserialize<Company>(cachedData);
+                return Ok(cachedCompany);
+            }
+
+            var company = await _context.Companies.FindAsync(id);
             if (company == null)
             {
                 return NotFound(new { Message = "Company kaydı bulunamadı.", Status = 404 });
             }
+
+            var serializedCompany = JsonSerializer.Serialize(company);
+            await _redisDb.StringSetAsync(cacheKey, serializedCompany, TimeSpan.FromMinutes(5)); // 5 dakika cache'te tut
 
             return Ok(company);
         }
@@ -56,6 +96,13 @@ namespace Finance.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+
+                // Cache'deki eski veriyi temizle
+                string cacheKey = $"company_{id}";
+                await _redisDb.KeyDeleteAsync(cacheKey);
+
+                // Tüm verileri cache'ten kaldır
+                await _redisDb.KeyDeleteAsync("all_companies");
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -79,6 +126,9 @@ namespace Finance.Controllers
             _context.Companies.Add(company);
             await _context.SaveChangesAsync();
 
+            // Yeni eklenen company verisi cache'e eklenebilir, ancak mevcut cache'i güncellerken dikkatli olunmalı
+            await _redisDb.KeyDeleteAsync("all_companies"); // Tüm verileri cache'ten kaldır
+
             return CreatedAtAction(nameof(GetCompanyById), new { id = company.ID }, company);
         }
 
@@ -94,6 +144,13 @@ namespace Finance.Controllers
 
             _context.Companies.Remove(company);
             await _context.SaveChangesAsync();
+
+            // Silinen company verisi için cache'i temizle
+            string cacheKey = $"company_{id}";
+            await _redisDb.KeyDeleteAsync(cacheKey);
+
+            // Tüm verileri cache'ten kaldır
+            await _redisDb.KeyDeleteAsync("all_companies");
 
             return NoContent();
         }
@@ -134,4 +191,3 @@ namespace Finance.Controllers
         }
     }
 }
-
