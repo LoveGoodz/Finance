@@ -15,7 +15,7 @@ namespace Finance.Controllers
             _redis = redis;
         }
 
-        // Redis'e veri set etme
+        // Redis'e veri keyleme
         [HttpGet("set")]
         public async Task<IActionResult> SetCache(string key, string value)
         {
@@ -23,7 +23,7 @@ namespace Finance.Controllers
             TimeSpan expiryTime = TimeSpan.FromMinutes(60); // 60 dakika sonra cache otomatik olarak silinecek
             try
             {
-                await db.StringSetAsync(key, value, expiryTime);  // Redis'e key-value şeklinde veri kaydediyoruz
+                await db.StringSetAsync(key, value, expiryTime);  
                 Log.Information("Set cache key: {Key} with value: {Value}", key, value);
                 return Ok("Value set in Redis");
             }
@@ -41,7 +41,7 @@ namespace Finance.Controllers
             var db = _redis.GetDatabase();
             try
             {
-                var value = await db.StringGetAsync(key); // Redis'teki veriyi key ile okuyoruz
+                var value = await db.StringGetAsync(key); 
                 if (!value.HasValue)
                 {
                     Log.Warning("Cache key not found: {Key}", key);

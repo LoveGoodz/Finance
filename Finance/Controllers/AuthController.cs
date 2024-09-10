@@ -21,19 +21,19 @@ namespace Finance.Controllers
         [HttpPost("login")]
         public IActionResult Login([FromBody] UserLogin request)
         {
-            // Sabit kullanıcı adı ve şifre kontrolü (admin - 123456)
+            
             if (request.Username == "admin" && request.Password == "123456")
             {
                 // JWT Token oluşturma işlemi
                 var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]); // Kullanıcı anahtarını doğru alın
+                var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]); 
 
-                // Claim'ler ile token bilgisi ekleyebilirsiniz (örn: roller)
+                
                 var claims = new[]
                 {
                     new Claim(JwtRegisteredClaimNames.Sub, request.Username),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // Benzersiz bir token kimliği
-                    new Claim(ClaimTypes.Role, "Admin") // Örneğin, kullanıcı rolü ekleyebilirsiniz
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), 
+                    new Claim(ClaimTypes.Role, "Admin") 
                 };
 
                 // Token süresi ve imzalama işlemi
@@ -68,7 +68,7 @@ namespace Finance.Controllers
             return Unauthorized("Geçersiz kullanıcı adı veya şifre.");
         }
 
-        // Basit model sınıfı
+       
         public class UserLogin
         {
             public string Username { get; set; }

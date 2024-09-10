@@ -96,7 +96,7 @@ namespace Finance.Controllers
             {
                 CustomerID = invoice.CustomerID,
                 InvoiceID = invoice.ID,
-                TransactionType = "Satış", // ya da "Alış", duruma göre
+                TransactionType = "Satış", 
                 Amount = invoice.TotalAmount,
                 CreatedAt = DateTime.Now
             };
