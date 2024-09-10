@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Serilog;
+
 namespace Finance.Controllers
 {
     [Authorize]
@@ -28,7 +29,7 @@ namespace Finance.Controllers
             return Ok();
         }
 
-        // GET: api/ActTrans/all - Tüm verileri sayfalama olmadan döndürür
+        // GET: api/ActTrans/all - Tüm verileri döndürür, sayfalama ve filtreleme olmadan
         [HttpGet("all")]
         public async Task<IActionResult> GetAllActTrans()
         {

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Finance.Controllers
 {
-    [Authorize] // Bu controller'daki tüm action metotlarına JWT doğrulaması gerekiyor
+    [Authorize] // JWT doğrulaması
     [Route("api/[controller]")]
     [ApiController]
     public class InvoiceController : ControllerBase
@@ -42,6 +42,70 @@ namespace Finance.Controllers
             return Ok(invoice);
         }
 
+        // POST: api/Invoice - Yeni Invoice ekler (Fiş Taslağı)
+        [HttpPost]
+        public async Task<ActionResult<Invoice>> PostInvoice(Invoice invoice)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            invoice.Status = "Taslak";  // Fiş başlangıçta "Taslak" olacak
+            invoice.CreatedAt = DateTime.Now;
+
+            _context.Invoices.Add(invoice);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetInvoiceById), new { id = invoice.ID }, invoice);
+        }
+
+        // PUT: api/Invoice/approve/5 - Fiş Onaylama İşlemi ve StockTrans, ActTrans İşlemleri
+        [HttpPut("approve/{id}")]
+        public async Task<IActionResult> ApproveInvoice(int id)
+        {
+            var invoice = await _context.Invoices
+                                        .Include(i => i.InvoiceDetails)
+                                        .ThenInclude(d => d.Stock)
+                                        .FirstOrDefaultAsync(i => i.ID == id);
+
+            if (invoice == null)
+                return NotFound(new { Message = "Fatura kaydı bulunamadı.", Status = 404 });
+
+            if (invoice.Status != "Taslak")
+                return BadRequest(new { Message = "Sadece taslak durumundaki faturalar onaylanabilir.", Status = 400 });
+
+            // Fişi onayla ve durumu "Onaylandı" olarak güncelle
+            invoice.Status = "Onaylandı";
+            invoice.UpdatedAt = DateTime.Now;
+
+            // Stok hareketlerini oluştur
+            foreach (var detail in invoice.InvoiceDetails)
+            {
+                var stockTrans = new StockTrans
+                {
+                    StockID = detail.StockID,
+                    InvoiceDetailsID = detail.ID,
+                    TransactionType = "Satış", // ya da "Alış", duruma göre değiştirilebilir
+                    Quantity = detail.Quantity,
+                    CreatedAt = DateTime.Now
+                };
+                _context.StockTrans.Add(stockTrans);
+            }
+
+            // Muhasebe hareketlerini oluştur
+            var actTrans = new ActTrans
+            {
+                CustomerID = invoice.CustomerID,
+                InvoiceID = invoice.ID,
+                TransactionType = "Satış", // ya da "Alış", duruma göre
+                Amount = invoice.TotalAmount,
+                CreatedAt = DateTime.Now
+            };
+            _context.ActTrans.Add(actTrans);
+
+            await _context.SaveChangesAsync();
+            return Ok(new { Message = "Fatura başarıyla onaylandı.", Invoice = invoice });
+        }
+
         // PUT: api/Invoice/5 - Mevcut bir Invoice günceller
         [HttpPut("{id}")]
         public async Task<IActionResult> PutInvoice(int id, Invoice invoice)
@@ -49,6 +113,11 @@ namespace Finance.Controllers
             if (id != invoice.ID)
             {
                 return BadRequest(new { Message = "ID parametresi ile Invoice.ID eşleşmiyor.", Status = 400 });
+            }
+
+            if (invoice.Status == "Onaylandı")
+            {
+                return BadRequest(new { Message = "Onaylanmış faturalar güncellenemez.", Status = 400 });
             }
 
             _context.Entry(invoice).State = EntityState.Modified;
@@ -72,16 +141,6 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // POST: api/Invoice - Yeni Invoice ekler
-        [HttpPost]
-        public async Task<ActionResult<Invoice>> PostInvoice(Invoice invoice)
-        {
-            _context.Invoices.Add(invoice);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetInvoiceById), new { id = invoice.ID }, invoice);
-        }
-
         // DELETE: api/Invoice/5 - Belirli ID'ye sahip Invoice siler
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteInvoice(int id)
@@ -90,6 +149,11 @@ namespace Finance.Controllers
             if (invoice == null)
             {
                 return NotFound(new { Message = "Fatura kaydı bulunamadı.", Status = 404 });
+            }
+
+            if (invoice.Status == "Onaylandı")
+            {
+                return BadRequest(new { Message = "Onaylanmış faturalar silinemez.", Status = 400 });
             }
 
             _context.Invoices.Remove(invoice);
@@ -134,4 +198,3 @@ namespace Finance.Controllers
         }
     }
 }
-

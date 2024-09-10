@@ -2,6 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Finance.Controllers
 {
@@ -48,6 +51,12 @@ namespace Finance.Controllers
                 return BadRequest(new { Message = "ID parametresi ile StockTrans.ID eşleşmiyor.", Status = 400 });
             }
 
+            // ID ile kayıt olup olmadığını kontrol ediyoruz
+            if (!StockTranExists(id))
+            {
+                return NotFound(new { Message = "Stok işlemi kaydı bulunamadı.", Status = 404 });
+            }
+
             _context.Entry(stockTran).State = EntityState.Modified;
 
             try
@@ -56,17 +65,14 @@ namespace Finance.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!StockTranExists(id))
-                {
-                    return NotFound(new { Message = "Stok işlemi kaydı bulunamadı.", Status = 404 });
-                }
-                else
-                {
-                    throw;
-                }
+                throw;
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Beklenmeyen bir hata oluştu.", Error = ex.Message });
             }
 
-            return NoContent();
+            return Ok(new { Message = "Stok işlemi başarıyla güncellendi." });
         }
 
         // POST: api/StockTrans - Yeni stok işlemi ekler
@@ -92,7 +98,7 @@ namespace Finance.Controllers
             _context.StockTrans.Remove(stockTran);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(new { Message = "Stok işlemi başarıyla silindi." });
         }
 
         // GET: api/StockTrans - Filtreleme ve Sayfalama ile stok işlemlerini getirir
