@@ -5,8 +5,6 @@ using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Caching.Distributed;
-using System.Text.Json;
 
 namespace Finance.Controllers
 {
@@ -16,62 +14,32 @@ namespace Finance.Controllers
     public class InvoiceController : ControllerBase
     {
         private readonly FinanceContext _context;
-        private readonly IDistributedCache _cache;
 
-        public InvoiceController(FinanceContext context, IDistributedCache cache)
+        public InvoiceController(FinanceContext context)
         {
             _context = context;
-            _cache = cache;
         }
 
         // GET: api/Invoice/all - Tüm verileri listele, sayfalama ve filtreleme olmadan
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<Invoice>>> GetAllInvoices()
         {
-            var cacheKey = "all_invoices";
-            var cachedInvoices = await _cache.GetStringAsync(cacheKey);
-
-            if (cachedInvoices != null)
-            {
-                var invoices = JsonSerializer.Deserialize<IEnumerable<Invoice>>(cachedInvoices);
-                return Ok(new { Message = "Tüm faturalar cache'den listelendi.", Data = invoices });
-            }
-
-            var invoicesFromDb = await _context.Invoices.ToListAsync();
-            var options = new DistributedCacheEntryOptions()
-                .SetSlidingExpiration(TimeSpan.FromMinutes(5));
-
-            await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(invoicesFromDb), options);
-
-            return Ok(new { Message = "Tüm faturalar veritabanından listelendi.", Data = invoicesFromDb });
+            var invoices = await _context.Invoices.ToListAsync();
+            return Ok(new { Message = "Tüm faturalar listelendi.", Data = invoices });
         }
 
         // GET: api/Invoice/5 - ID'ye göre Invoice getirir
         [HttpGet("{id}")]
         public async Task<ActionResult<Invoice>> GetInvoiceById(int id)
         {
-            var cacheKey = $"invoice_{id}";
-            var cachedInvoice = await _cache.GetStringAsync(cacheKey);
+            var invoice = await _context.Invoices.FindAsync(id);
 
-            if (cachedInvoice != null)
-            {
-                var invoice = JsonSerializer.Deserialize<Invoice>(cachedInvoice);
-                return Ok(invoice);
-            }
-
-            var invoiceFromDb = await _context.Invoices.FindAsync(id);
-
-            if (invoiceFromDb == null)
+            if (invoice == null)
             {
                 return NotFound(new { Message = "Fatura kaydı bulunamadı.", Status = 404 });
             }
 
-            var options = new DistributedCacheEntryOptions()
-                .SetSlidingExpiration(TimeSpan.FromMinutes(5));
-
-            await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(invoiceFromDb), options);
-
-            return Ok(invoiceFromDb);
+            return Ok(invoice);
         }
 
         // PUT: api/Invoice/5 - Mevcut bir Invoice günceller
@@ -88,9 +56,6 @@ namespace Finance.Controllers
             try
             {
                 await _context.SaveChangesAsync();
-                await _cache.RemoveAsync($"invoice_{id}");
-                // Remove the cache entry for the "all" invoices
-                await _cache.RemoveAsync("all_invoices");
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -114,8 +79,6 @@ namespace Finance.Controllers
             _context.Invoices.Add(invoice);
             await _context.SaveChangesAsync();
 
-            await _cache.RemoveAsync("all_invoices");
-
             return CreatedAtAction(nameof(GetInvoiceById), new { id = invoice.ID }, invoice);
         }
 
@@ -131,9 +94,6 @@ namespace Finance.Controllers
 
             _context.Invoices.Remove(invoice);
             await _context.SaveChangesAsync();
-
-            await _cache.RemoveAsync($"invoice_{id}");
-            await _cache.RemoveAsync("all_invoices");
 
             return NoContent();
         }
@@ -174,3 +134,4 @@ namespace Finance.Controllers
         }
     }
 }
+

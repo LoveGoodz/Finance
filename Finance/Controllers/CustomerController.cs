@@ -2,13 +2,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Serilog; 
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Finance.Controllers
 {
-    [Authorize] // Bu controller'daki tüm action metotlarına JWT doğrulaması gerekiyor
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class CustomerController : ControllerBase
@@ -20,22 +21,26 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/Customer/all - Tüm verileri döndürür, sayfalama ve filtreleme olmadan
+        // GET: api/Customer/all
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<Customer>>> GetAllCustomers()
         {
+            Log.Information("GetAllCustomers method called");
+
             var customers = await _context.Customers.ToListAsync();
             return Ok(customers);
         }
 
-        // GET: api/Customer/5 - ID'ye göre müşteri getirir
+        // GET: api/Customer/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Customer>> GetCustomerById(int id)
         {
-            var customer = await _context.Customers.FindAsync(id);
+            Log.Information("GetCustomerById method called with id {Id}", id);
 
+            var customer = await _context.Customers.FindAsync(id);
             if (customer == null)
             {
+                Log.Warning("Customer with id {Id} not found", id);
                 return NotFound(new { Message = "Müşteri kaydı bulunamadı.", Status = 404 });
             }
 
@@ -46,8 +51,11 @@ namespace Finance.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCustomer(int id, Customer customer)
         {
+            Log.Information("PutCustomer method called with id {Id}", id);
+
             if (id != customer.ID)
             {
+                Log.Error("ID parameter does not match Customer.ID");
                 return BadRequest(new { Message = "ID parametresi ile Customer.ID eşleşmiyor.", Status = 400 });
             }
 
@@ -56,15 +64,18 @@ namespace Finance.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                Log.Information("Customer with id {Id} updated successfully", id);
             }
             catch (DbUpdateConcurrencyException)
             {
                 if (!CustomerExists(id))
                 {
+                    Log.Warning("Customer with id {Id} not found", id);
                     return NotFound(new { Message = "Müşteri kaydı bulunamadı.", Status = 404 });
                 }
                 else
                 {
+                    Log.Error("An error occurred while updating customer with id {Id}", id);
                     throw;
                 }
             }
@@ -76,8 +87,11 @@ namespace Finance.Controllers
         [HttpPost]
         public async Task<ActionResult<Customer>> PostCustomer(Customer customer)
         {
+            Log.Information("PostCustomer method called");
+
             _context.Customers.Add(customer);
             await _context.SaveChangesAsync();
+            Log.Information("Customer with id {Id} created successfully", customer.ID);
 
             return CreatedAtAction(nameof(GetCustomerById), new { id = customer.ID }, customer);
         }
@@ -86,14 +100,18 @@ namespace Finance.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCustomer(int id)
         {
+            Log.Information("DeleteCustomer method called with id {Id}", id);
+
             var customer = await _context.Customers.FindAsync(id);
             if (customer == null)
             {
+                Log.Warning("Customer with id {Id} not found", id);
                 return NotFound(new { Message = "Müşteri kaydı bulunamadı.", Status = 404 });
             }
 
             _context.Customers.Remove(customer);
             await _context.SaveChangesAsync();
+            Log.Information("Customer with id {Id} deleted successfully", id);
 
             return NoContent();
         }
@@ -102,8 +120,11 @@ namespace Finance.Controllers
         [HttpGet]
         public async Task<ActionResult> GetCustomers(string name = null, int pageNumber = 1, int pageSize = 10)
         {
+            Log.Information("GetCustomers method called with parameters: name = {Name}, pageNumber = {PageNumber}, pageSize = {PageSize}", name, pageNumber, pageSize);
+
             if (pageNumber <= 0 || pageSize <= 0)
             {
+                Log.Error("PageNumber and PageSize must be greater than zero");
                 return BadRequest(new { Message = "PageNumber ve PageSize sıfırdan büyük olmalıdır.", Status = 400 });
             }
 

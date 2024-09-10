@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,16 +15,19 @@ namespace Finance.Controllers
     public class InvoiceDetailsController : ControllerBase
     {
         private readonly FinanceContext _context;
+        private readonly ILogger<InvoiceDetailsController> _logger;
 
-        public InvoiceDetailsController(FinanceContext context)
+        public InvoiceDetailsController(FinanceContext context, ILogger<InvoiceDetailsController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: api/InvoiceDetails/all - Tüm InvoiceDetails verilerini döndürür
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<InvoiceDetails>>> GetAllInvoiceDetails()
         {
+            _logger.LogInformation("GetAllInvoiceDetails method called.");
             var invoiceDetails = await _context.InvoiceDetails.ToListAsync();
             return Ok(new { Message = "Tüm fatura detayları başarıyla getirildi.", Data = invoiceDetails });
         }
@@ -32,10 +36,12 @@ namespace Finance.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<InvoiceDetails>> GetInvoiceDetailById(int id)
         {
+            _logger.LogInformation($"GetInvoiceDetailById method called with ID: {id}");
             var invoiceDetail = await _context.InvoiceDetails.FindAsync(id);
 
             if (invoiceDetail == null)
             {
+                _logger.LogWarning($"Invoice detail with ID {id} not found.");
                 return NotFound(new { Message = "Fatura detayı bulunamadı.", Status = 404 });
             }
 
@@ -46,8 +52,10 @@ namespace Finance.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutInvoiceDetail(int id, InvoiceDetails invoiceDetail)
         {
+            _logger.LogInformation($"PutInvoiceDetail method called with ID: {id}");
             if (id != invoiceDetail.ID)
             {
+                _logger.LogWarning($"ID parameter {id} does not match InvoiceDetail.ID {invoiceDetail.ID}");
                 return BadRequest(new { Message = "ID parametresi ile InvoiceDetail.ID eşleşmiyor.", Status = 400 });
             }
 
@@ -56,15 +64,18 @@ namespace Finance.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                _logger.LogInformation($"InvoiceDetail with ID {id} updated successfully.");
             }
             catch (DbUpdateConcurrencyException)
             {
                 if (!InvoiceDetailExists(id))
                 {
+                    _logger.LogWarning($"InvoiceDetail with ID {id} not found.");
                     return NotFound(new { Message = "Fatura detayı kaydı bulunamadı.", Status = 404 });
                 }
                 else
                 {
+                    _logger.LogError("An error occurred during the update operation.");
                     return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "Güncelleme hatası oluştu.", Status = 500 });
                 }
             }
@@ -76,9 +87,11 @@ namespace Finance.Controllers
         [HttpPost]
         public async Task<ActionResult<InvoiceDetails>> PostInvoiceDetail(InvoiceDetails invoiceDetail)
         {
+            _logger.LogInformation("PostInvoiceDetail method called.");
             _context.InvoiceDetails.Add(invoiceDetail);
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation($"InvoiceDetail with ID {invoiceDetail.ID} created successfully.");
             return CreatedAtAction(nameof(GetInvoiceDetailById), new { id = invoiceDetail.ID }, new { Message = "Fatura detayı başarıyla eklendi.", Data = invoiceDetail });
         }
 
@@ -86,15 +99,18 @@ namespace Finance.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteInvoiceDetail(int id)
         {
+            _logger.LogInformation($"DeleteInvoiceDetail method called with ID: {id}");
             var invoiceDetail = await _context.InvoiceDetails.FindAsync(id);
             if (invoiceDetail == null)
             {
+                _logger.LogWarning($"InvoiceDetail with ID {id} not found.");
                 return NotFound(new { Message = "Fatura detayı bulunamadı.", Status = 404 });
             }
 
             _context.InvoiceDetails.Remove(invoiceDetail);
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation($"InvoiceDetail with ID {id} deleted successfully.");
             return NoContent();
         }
 
@@ -102,8 +118,10 @@ namespace Finance.Controllers
         [HttpGet]
         public async Task<ActionResult> GetInvoiceDetails(int? stockId = null, int pageNumber = 1, int pageSize = 10)
         {
+            _logger.LogInformation("GetInvoiceDetails method called with parameters - StockID: {stockId}, PageNumber: {pageNumber}, PageSize: {pageSize}", stockId, pageNumber, pageSize);
             if (pageNumber <= 0 || pageSize <= 0)
             {
+                _logger.LogWarning("PageNumber and PageSize must be greater than zero.");
                 return BadRequest(new { Message = "PageNumber ve PageSize sıfırdan büyük olmalıdır.", Status = 400 });
             }
 

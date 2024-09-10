@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
 
 namespace Finance.Controllers
 {
@@ -11,17 +12,21 @@ namespace Finance.Controllers
     public class StockController : ControllerBase
     {
         private readonly FinanceContext _context;
+        private readonly ILogger<StockController> _logger;
 
-        public StockController(FinanceContext context)
+        public StockController(FinanceContext context, ILogger<StockController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: api/Stock/all - Tüm stokları listeler, sayfalama ve filtreleme olmadan
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<Stock>>> GetAllStocks()
         {
+            _logger.LogInformation("Tüm stoklar isteniyor.");
             var stocks = await _context.Stocks.ToListAsync();
+            _logger.LogInformation("Tüm stoklar başarıyla getirildi.");
             return Ok(new { Message = "Tüm stoklar başarıyla getirildi.", Data = stocks });
         }
 
@@ -29,13 +34,16 @@ namespace Finance.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Stock>> GetStockById(int id)
         {
+            _logger.LogInformation($"Stok ID {id} ile isteniyor.");
             var stock = await _context.Stocks.FindAsync(id);
 
             if (stock == null)
             {
+                _logger.LogWarning($"Stok ID {id} bulunamadı.");
                 return NotFound(new { Message = "Stok kaydı bulunamadı.", Status = 404 });
             }
 
+            _logger.LogInformation($"Stok ID {id} başarıyla getirildi.");
             return Ok(new { Message = "Stok başarıyla getirildi.", Data = stock });
         }
 
@@ -45,6 +53,7 @@ namespace Finance.Controllers
         {
             if (id != stock.ID)
             {
+                _logger.LogWarning($"Gelen ID {id} ile stok ID {stock.ID} eşleşmiyor.");
                 return BadRequest(new { Message = "ID parametresi ile Stock.ID eşleşmiyor.", Status = 400 });
             }
 
@@ -53,15 +62,18 @@ namespace Finance.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                _logger.LogInformation($"Stok ID {id} başarıyla güncellendi.");
             }
             catch (DbUpdateConcurrencyException)
             {
                 if (!StockExists(id))
                 {
+                    _logger.LogWarning($"Stok ID {id} bulunamadı.");
                     return NotFound(new { Message = "Stok kaydı bulunamadı.", Status = 404 });
                 }
                 else
                 {
+                    _logger.LogError($"Stok ID {id} güncellenirken hata oluştu.");
                     throw;
                 }
             }
@@ -73,9 +85,11 @@ namespace Finance.Controllers
         [HttpPost]
         public async Task<ActionResult<Stock>> PostStock(Stock stock)
         {
+            _logger.LogInformation("Yeni stok ekleniyor.");
             _context.Stocks.Add(stock);
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation($"Stok ID {stock.ID} başarıyla eklendi.");
             return CreatedAtAction(nameof(GetStockById), new { id = stock.ID }, new { Message = "Stok başarıyla eklendi.", Data = stock });
         }
 
@@ -83,15 +97,18 @@ namespace Finance.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteStock(int id)
         {
+            _logger.LogInformation($"Stok ID {id} siliniyor.");
             var stock = await _context.Stocks.FindAsync(id);
             if (stock == null)
             {
+                _logger.LogWarning($"Stok ID {id} bulunamadı.");
                 return NotFound(new { Message = "Stok kaydı bulunamadı.", Status = 404 });
             }
 
             _context.Stocks.Remove(stock);
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation($"Stok ID {id} başarıyla silindi.");
             return NoContent();
         }
 
@@ -101,9 +118,11 @@ namespace Finance.Controllers
         {
             if (pageNumber <= 0 || pageSize <= 0)
             {
+                _logger.LogWarning("Geçersiz PageNumber veya PageSize.");
                 return BadRequest(new { Message = "PageNumber ve PageSize sıfırdan büyük olmalıdır.", Status = 400 });
             }
 
+            _logger.LogInformation($"Stoklar filtreleniyor: İsim: {name}, Sayfa: {pageNumber}, Sayfa Boyutu: {pageSize}");
             var query = _context.Stocks.AsQueryable();
 
             // Stok ismi ile filtreleme
@@ -121,6 +140,7 @@ namespace Finance.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
+            _logger.LogInformation("Stoklar başarıyla getirildi.");
             return Ok(new { TotalRecords = totalRecords, Data = stocks });
         }
 

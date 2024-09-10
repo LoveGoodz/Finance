@@ -4,12 +4,21 @@ using StackExchange.Redis;
 using System.Text;
 using Finance.Data;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Serilog yapýlandýrmasý
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()  // Minimum log seviyesini belirleyin (Debug, Information, Error gibi)
+    .WriteTo.Console()  // Loglarý konsola yazdýrýn
+    .WriteTo.File(@"C:\Logs\FinanceApp\log.txt", rollingInterval: RollingInterval.Day) // Loglarý dosyaya yazdýrýn (Windows için)
+    .CreateLogger();
+
+// Serilog'u genel loglama mekanizmasý olarak kullanýn
+builder.Host.UseSerilog();
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect("localhost:6379"));
-
 
 builder.Services.AddDbContext<FinanceContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -92,4 +101,16 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+try
+{
+    Log.Information("Uygulama baþlatýlýyor...");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Uygulama baþlatýlamadý.");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

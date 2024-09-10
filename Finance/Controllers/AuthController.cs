@@ -3,6 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Serilog;
 
 namespace Finance.Controllers
 {
@@ -51,16 +52,19 @@ namespace Finance.Controllers
                     var tokenString = tokenHandler.WriteToken(token);
 
                     // Token döndürülür
+                    Log.Information("User {Username} successfully logged in", request.Username);
                     return Ok(new { Token = tokenString });
                 }
                 catch (Exception ex)
                 {
                     // Token oluşturulurken bir hata oluştu
+                    Log.Error(ex, "Error occurred while creating token for user {Username}", request.Username);
                     return StatusCode(500, $"Token oluşturulurken bir hata oluştu: {ex.Message}");
                 }
             }
 
             // Hatalı kullanıcı adı veya şifre
+            Log.Warning("Invalid login attempt for user {Username}", request.Username);
             return Unauthorized("Geçersiz kullanıcı adı veya şifre.");
         }
 

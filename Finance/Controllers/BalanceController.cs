@@ -2,9 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
+using Serilog;
 
 namespace Finance.Controllers
 {
@@ -24,17 +22,22 @@ namespace Finance.Controllers
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<Balance>>> GetAllBalances()
         {
-            return await _context.Balances.ToListAsync();
+            Log.Information("Tüm Balance kayıtları listeleniyor.");
+            var balances = await _context.Balances.ToListAsync();
+            Log.Information("{Count} Balance kaydı alındı.", balances.Count);
+            return Ok(balances);
         }
 
         // GET: api/Balance/5 - ID'ye göre Balance getirir
         [HttpGet("{id}")]
         public async Task<ActionResult<Balance>> GetBalanceById(int id)
         {
+            Log.Information("Balance kaydı isteniyor. ID: {Id}", id);
             var balance = await _context.Balances.FindAsync(id);
 
             if (balance == null)
             {
+                Log.Warning("Balance kaydı bulunamadı. ID: {Id}", id);
                 return NotFound(new { Message = "Balance kaydı bulunamadı.", Status = 404 });
             }
 
@@ -47,6 +50,7 @@ namespace Finance.Controllers
         {
             if (id != balance.ID)
             {
+                Log.Warning("ID parametresi ile Balance.ID eşleşmiyor. ID: {Id}", id);
                 return BadRequest(new { Message = "ID parametresi ve Balance.ID eşleşmiyor.", Status = 400 });
             }
 
@@ -55,15 +59,18 @@ namespace Finance.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                Log.Information("Balance kaydı güncellendi. ID: {Id}", id);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException ex)
             {
                 if (!BalanceExists(id))
                 {
+                    Log.Error("Balance kaydı bulunamadı. ID: {Id}", id);
                     return NotFound(new { Message = "Balance kaydı bulunamadı.", Status = 404 });
                 }
                 else
                 {
+                    Log.Error(ex, "Balance güncelleme sırasında bir hata oluştu. ID: {Id}", id);
                     throw;
                 }
             }
@@ -78,6 +85,7 @@ namespace Finance.Controllers
             _context.Balances.Add(balance);
             await _context.SaveChangesAsync();
 
+            Log.Information("Yeni Balance kaydı eklendi. ID: {Id}", balance.ID);
             return CreatedAtAction(nameof(GetBalanceById), new { id = balance.ID }, balance);
         }
 
@@ -85,15 +93,18 @@ namespace Finance.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBalance(int id)
         {
+            Log.Information("Balance kaydı siliniyor. ID: {Id}", id);
             var balance = await _context.Balances.FindAsync(id);
             if (balance == null)
             {
+                Log.Warning("Balance kaydı silinemedi. Kayıt bulunamadı. ID: {Id}", id);
                 return NotFound(new { Message = "Balance kaydı bulunamadı.", Status = 404 });
             }
 
             _context.Balances.Remove(balance);
             await _context.SaveChangesAsync();
 
+            Log.Information("Balance kaydı silindi. ID: {Id}", id);
             return NoContent();
         }
 
@@ -103,8 +114,11 @@ namespace Finance.Controllers
         {
             if (pageNumber <= 0 || pageSize <= 0)
             {
+                Log.Warning("Geçersiz sayfa boyutu veya numarası. PageNumber: {PageNumber}, PageSize: {PageSize}", pageNumber, pageSize);
                 return BadRequest(new { Message = "PageNumber ve PageSize sıfırdan büyük olmalıdır.", Status = 400 });
             }
+
+            Log.Information("Balance kayıtları sayfalama ve filtreleme ile getiriliyor. CompanyID: {CompanyID}", companyId);
 
             var query = _context.Balances.AsQueryable();
 
@@ -123,6 +137,7 @@ namespace Finance.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
+            Log.Information("{Count} Balance kaydı getirildi. PageNumber: {PageNumber}, PageSize: {PageSize}", balances.Count, pageNumber, pageSize);
             return Ok(new { TotalRecords = totalRecords, Data = balances });
         }
 

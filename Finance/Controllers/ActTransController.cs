@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
-
+using Serilog;
 namespace Finance.Controllers
 {
     [Authorize]
@@ -22,6 +22,7 @@ namespace Finance.Controllers
         {
             if (username == null)
             {
+                Log.Warning("Yetkilendirme başarısız: Kullanıcı doğrulanamadı."); // Loglama: Uyarı
                 return Unauthorized("Kullanıcı doğrulanamadı.");
             }
             return Ok();
@@ -35,7 +36,11 @@ namespace Finance.Controllers
             var unauthorizedResult = UnauthorizedIfNull(username);
             if (unauthorizedResult is UnauthorizedResult) return unauthorizedResult;
 
+            Log.Information("Tüm ActTrans verileri isteniyor. Kullanıcı: {Username}", username); // Loglama: Bilgi
+
             var actTrans = await _context.ActTrans.ToListAsync();
+            Log.Information("Toplam {Count} ActTrans kaydı alındı.", actTrans.Count); // Loglama: Bilgi
+
             return Ok(actTrans);
         }
 
@@ -47,9 +52,12 @@ namespace Finance.Controllers
             var unauthorizedResult = UnauthorizedIfNull(username);
             if (unauthorizedResult is UnauthorizedResult) return unauthorizedResult;
 
+            Log.Information("ID ile ActTrans verisi isteniyor: {Id} - Kullanıcı: {Username}", id, username); // Loglama: Bilgi
+
             var actTran = await _context.ActTrans.FindAsync(id);
             if (actTran == null)
             {
+                Log.Warning("ActTrans kaydı bulunamadı: {Id}", id); // Loglama: Uyarı
                 return NotFound("ActTrans kaydı bulunamadı.");
             }
 
@@ -62,6 +70,7 @@ namespace Finance.Controllers
         {
             if (id != actTran.ID)
             {
+                Log.Warning("Güncelleme hatası: ID parametresi ile ActTrans.ID eşleşmiyor. ID: {Id}", id); // Loglama: Uyarı
                 return BadRequest("ID parametresi ve ActTrans.ID eşleşmiyor.");
             }
 
@@ -74,15 +83,18 @@ namespace Finance.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                Log.Information("ActTrans güncellendi. ID: {Id}", id); // Loglama: Bilgi
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException ex)
             {
                 if (!ActTranExists(id))
                 {
+                    Log.Error("ActTrans kaydı bulunamadı. ID: {Id}", id); // Loglama: Hata
                     return NotFound("ActTrans kaydı bulunamadı.");
                 }
                 else
                 {
+                    Log.Error(ex, "ActTrans güncellenirken bir hata oluştu. ID: {Id}", id); // Loglama: Hata
                     throw;
                 }
             }
@@ -101,6 +113,8 @@ namespace Finance.Controllers
             _context.ActTrans.Add(actTran);
             await _context.SaveChangesAsync();
 
+            Log.Information("Yeni ActTrans eklendi. ID: {Id}", actTran.ID); // Loglama: Bilgi
+
             return CreatedAtAction(nameof(GetActTranById), new { id = actTran.ID }, actTran);
         }
 
@@ -115,11 +129,14 @@ namespace Finance.Controllers
             var actTran = await _context.ActTrans.FindAsync(id);
             if (actTran == null)
             {
+                Log.Warning("ActTrans kaydı silinemedi. Kayıt bulunamadı. ID: {Id}", id); // Loglama: Uyarı
                 return NotFound("ActTrans kaydı bulunamadı.");
             }
 
             _context.ActTrans.Remove(actTran);
             await _context.SaveChangesAsync();
+
+            Log.Information("ActTrans silindi. ID: {Id}", id); // Loglama: Bilgi
 
             return NoContent();
         }
@@ -130,6 +147,7 @@ namespace Finance.Controllers
         {
             if (pageNumber <= 0 || pageSize <= 0)
             {
+                Log.Warning("Geçersiz sayfa boyutu veya numarası. PageNumber: {PageNumber}, PageSize: {PageSize}", pageNumber, pageSize); // Loglama: Uyarı
                 return BadRequest("PageNumber ve PageSize sıfırdan büyük olmalıdır.");
             }
 
@@ -143,6 +161,7 @@ namespace Finance.Controllers
             if (!string.IsNullOrEmpty(transactionType))
             {
                 query = query.Where(at => at.TransactionType.Contains(transactionType));
+                Log.Information("TransactionType ile filtreleme yapıldı: {TransactionType}", transactionType); // Loglama: Bilgi
             }
 
             // Toplam kayıt sayısı
@@ -153,6 +172,8 @@ namespace Finance.Controllers
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
+
+            Log.Information("{Count} ActTrans kaydı getirildi. PageNumber: {PageNumber}, PageSize: {PageSize}", actTrans.Count, pageNumber, pageSize); // Loglama: Bilgi
 
             return Ok(new { TotalRecords = totalRecords, Data = actTrans });
         }
