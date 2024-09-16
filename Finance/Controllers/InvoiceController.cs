@@ -20,15 +20,20 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/Invoice/all - Tüm verileri listele, sayfalama ve filtreleme olmadan
+        // GET: api/Invoice/all - Tüm faturaları listele, sayfalama ve filtreleme olmadan
         [HttpGet("all")]
         public async Task<ActionResult<IEnumerable<Invoice>>> GetAllInvoices()
         {
             var invoices = await _context.Invoices.ToListAsync();
+            if (!invoices.Any())
+            {
+                return NotFound(new { Message = "Hiç fatura bulunamadı." });
+            }
+
             return Ok(new { Message = "Tüm faturalar listelendi.", Data = invoices });
         }
 
-        // GET: api/Invoice/5 - ID'ye göre Invoice getirir
+        // GET: api/Invoice/{id} - ID'ye göre fatura getirir
         [HttpGet("{id}")]
         public async Task<ActionResult<Invoice>> GetInvoiceById(int id)
         {
@@ -36,21 +41,24 @@ namespace Finance.Controllers
 
             if (invoice == null)
             {
-                return NotFound(new { Message = "Fatura kaydı bulunamadı.", Status = 404 });
+                return NotFound(new { Message = "Fatura bulunamadı." });
             }
 
             return Ok(invoice);
         }
 
-        // POST: api/Invoice - Yeni Invoice ekler (Fiş Taslağı)
+        // POST: api/Invoice - Yeni fatura ekler (Fiş Taslağı)
         [HttpPost]
         public async Task<ActionResult<Invoice>> PostInvoice(Invoice invoice)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            {
+                return BadRequest(new { Message = "Geçersiz model verisi.", ModelState });
+            }
 
-            invoice.Status = "Taslak";  // Fiş başlangıçta "Taslak" olacak
-            invoice.CreatedAt = DateTime.Now;
+            // Varsayılan olarak yeni faturalar taslak olarak eklenecek
+            invoice.Status = "Taslak";
+            invoice.CreatedAt = DateTime.UtcNow;
 
             _context.Invoices.Add(invoice);
             await _context.SaveChangesAsync();
@@ -58,7 +66,7 @@ namespace Finance.Controllers
             return CreatedAtAction(nameof(GetInvoiceById), new { id = invoice.ID }, invoice);
         }
 
-        // PUT: api/Invoice/approve/5 - Fiş Onaylama İşlemi ve StockTrans, ActTrans İşlemleri
+        // PUT: api/Invoice/approve/{id} - Fişi onaylama ve StockTrans, ActTrans işlemleri
         [HttpPut("approve/{id}")]
         public async Task<IActionResult> ApproveInvoice(int id)
         {
@@ -68,14 +76,18 @@ namespace Finance.Controllers
                                         .FirstOrDefaultAsync(i => i.ID == id);
 
             if (invoice == null)
-                return NotFound(new { Message = "Fatura kaydı bulunamadı.", Status = 404 });
+            {
+                return NotFound(new { Message = "Fatura bulunamadı." });
+            }
 
             if (invoice.Status != "Taslak")
-                return BadRequest(new { Message = "Sadece taslak durumundaki faturalar onaylanabilir.", Status = 400 });
+            {
+                return BadRequest(new { Message = "Sadece taslak durumundaki faturalar onaylanabilir." });
+            }
 
-            // Fişi onayla ve durumu "Onaylandı" olarak güncelle
+            // Fişi onayla ve durumu güncelle
             invoice.Status = "Onaylandı";
-            invoice.UpdatedAt = DateTime.Now;
+            invoice.UpdatedAt = DateTime.UtcNow;
 
             // Stok hareketlerini oluştur
             foreach (var detail in invoice.InvoiceDetails)
@@ -84,9 +96,9 @@ namespace Finance.Controllers
                 {
                     StockID = detail.StockID,
                     InvoiceDetailsID = detail.ID,
-                    TransactionType = "Satış", // ya da "Alış", duruma göre değiştirilebilir
+                    TransactionType = "Satış",
                     Quantity = detail.Quantity,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.UtcNow
                 };
                 _context.StockTrans.Add(stockTrans);
             }
@@ -96,9 +108,9 @@ namespace Finance.Controllers
             {
                 CustomerID = invoice.CustomerID,
                 InvoiceID = invoice.ID,
-                TransactionType = "Satış", 
+                TransactionType = "Satış",
                 Amount = invoice.TotalAmount,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.UtcNow
             };
             _context.ActTrans.Add(actTrans);
 
@@ -106,18 +118,18 @@ namespace Finance.Controllers
             return Ok(new { Message = "Fatura başarıyla onaylandı.", Invoice = invoice });
         }
 
-        // PUT: api/Invoice/5 - Mevcut bir Invoice günceller
+        // PUT: api/Invoice/{id} - Fatura güncelleme
         [HttpPut("{id}")]
         public async Task<IActionResult> PutInvoice(int id, Invoice invoice)
         {
             if (id != invoice.ID)
             {
-                return BadRequest(new { Message = "ID parametresi ile Invoice.ID eşleşmiyor.", Status = 400 });
+                return BadRequest(new { Message = "ID parametresi ile Invoice.ID eşleşmiyor." });
             }
 
             if (invoice.Status == "Onaylandı")
             {
-                return BadRequest(new { Message = "Onaylanmış faturalar güncellenemez.", Status = 400 });
+                return BadRequest(new { Message = "Onaylanmış faturalar güncellenemez." });
             }
 
             _context.Entry(invoice).State = EntityState.Modified;
@@ -130,7 +142,7 @@ namespace Finance.Controllers
             {
                 if (!InvoiceExists(id))
                 {
-                    return NotFound(new { Message = "Fatura kaydı bulunamadı.", Status = 404 });
+                    return NotFound(new { Message = "Fatura bulunamadı." });
                 }
                 else
                 {
@@ -141,19 +153,19 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // DELETE: api/Invoice/5 - Belirli ID'ye sahip Invoice siler
+        // DELETE: api/Invoice/{id} - Fatura silme
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteInvoice(int id)
         {
             var invoice = await _context.Invoices.FindAsync(id);
             if (invoice == null)
             {
-                return NotFound(new { Message = "Fatura kaydı bulunamadı.", Status = 404 });
+                return NotFound(new { Message = "Fatura bulunamadı." });
             }
 
             if (invoice.Status == "Onaylandı")
             {
-                return BadRequest(new { Message = "Onaylanmış faturalar silinemez.", Status = 400 });
+                return BadRequest(new { Message = "Onaylanmış faturalar silinemez." });
             }
 
             _context.Invoices.Remove(invoice);
@@ -162,13 +174,13 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // GET: api/Invoice - Filtreleme ve Sayfalama
+        // GET: api/Invoice - Filtreleme ve sayfalama
         [HttpGet]
         public async Task<ActionResult> GetInvoices(string series = null, int pageNumber = 1, int pageSize = 10)
         {
             if (pageNumber <= 0 || pageSize <= 0)
             {
-                return BadRequest(new { Message = "PageNumber ve PageSize sıfırdan büyük olmalıdır.", Status = 400 });
+                return BadRequest(new { Message = "Sayfa numarası ve boyutu sıfırdan büyük olmalıdır." });
             }
 
             var query = _context.Invoices.AsQueryable();
@@ -182,7 +194,7 @@ namespace Finance.Controllers
             // Toplam kayıt sayısı
             var totalRecords = await query.CountAsync();
 
-            // Sayfalama işlemi
+            // Sayfalama
             var invoices = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -191,7 +203,7 @@ namespace Finance.Controllers
             return Ok(new { TotalRecords = totalRecords, Data = invoices });
         }
 
-        // Veritabanında Invoice kaydı olup olmadığını kontrol eden yardımcı metot
+        // Yardımcı metot: Veritabanında fatura var mı kontrolü
         private bool InvoiceExists(int id)
         {
             return _context.Invoices.Any(e => e.ID == id);

@@ -33,10 +33,11 @@
 </template>
 
 <script>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Button from "primevue/button";
+import axios from "axios";
 import { useRouter } from "vue-router";
 
 export default {
@@ -46,20 +47,29 @@ export default {
     Button,
   },
   setup() {
-    // Test amaçlı fatura verileri
-    const invoices = ref([
-      { id: 1, customer: "Müşteri A", totalAmount: 1500, status: "Onaylandı" },
-      { id: 2, customer: "Müşteri B", totalAmount: 2300, status: "Taslak" },
-      {
-        id: 3,
-        customer: "Müşteri C",
-        totalAmount: 3200,
-        status: "İptal Edildi",
-      },
-    ]);
-
+    const invoices = ref([]);
     const router = useRouter();
 
+    // Sayfa yüklendiğinde veriyi çek
+    onMounted(async () => {
+      const token = localStorage.getItem("token");
+      try {
+        const response = await axios.get(
+          "https://localhost:7093/api/Invoice/all",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        invoices.value = response.data.Data;
+      } catch (error) {
+        console.error("Faturalar yüklenirken hata oluştu:", error);
+        alert("Fatura yüklenemedi!");
+      }
+    });
+
+    // Detay sayfasına yönlendir
     const viewInvoice = (id) => {
       router.push(`/invoice/${id}`);
     };
@@ -76,6 +86,7 @@ h1 {
   margin-bottom: 1rem;
 }
 
+/* Durum renkleri */
 .status-approved {
   color: green;
   font-weight: bold;
@@ -91,6 +102,7 @@ h1 {
   font-weight: bold;
 }
 
+/* Tablo başlık ve gövde stilleri */
 .p-datatable-thead > tr > th {
   background-color: #c0c0c0;
   font-weight: bold;
@@ -101,6 +113,7 @@ h1 {
   background-color: #e0e0e0;
 }
 
+/* Buton stili */
 .p-button {
   background-color: #fffdd0;
   color: #b87333;

@@ -1,28 +1,28 @@
 <template>
   <nav>
-    <router-link to="/invoices">Fatura Listesi</router-link>
+    <router-link to="/invoice">Fatura Listesi</router-link>
   </nav>
   <router-view />
 </template>
 
 <style>
+/* Arka plan ve yazı tipleri */
 body {
-  background-color: #87ceeb;
+  background-color: #87ceeb; /* Deniz mavisi arka plan */
   margin: 0;
   padding: 0;
-  font-family: "Roboto", sans-serif;
+  font-family: "Roboto", sans-serif; /* Roboto yazı tipi */
 }
 
 /* Genel uygulama stili */
 #app {
-  font-family: "Montserrat", sans-serif;
+  font-family: "Montserrat", sans-serif; /* Genel yazı tipi Montserrat */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
 }
 
-/* Başlıklar için stil */
 h1,
 h2 {
   font-family: "Montserrat", sans-serif;
@@ -69,20 +69,5 @@ button {
 
 button:hover {
   background-color: #e63900;
-}
-
-.status-green {
-  color: green;
-  font-weight: bold;
-}
-
-.status-yellow {
-  color: yellow;
-  font-weight: bold;
-}
-
-.status-red {
-  color: red;
-  font-weight: bold;
 }
 </style>

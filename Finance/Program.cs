@@ -10,16 +10,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Serilog yapýlandýrmasý
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Information()  // Minimum log seviyesini belirleyin (Debug, Information, Error gibi)
-    .WriteTo.Console()  // Loglarý konsola yazdýrýn
-    .WriteTo.File(@"C:\Logs\FinanceApp\log.txt", rollingInterval: RollingInterval.Day) // Loglarý dosyaya yazdýrýn (Windows için)
+    .MinimumLevel.Information()
+    .WriteTo.Console()
+    .WriteTo.File(@"C:\Logs\FinanceApp\log.txt", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
-// Serilog'u genel loglama mekanizmasý olarak kullanýn
 builder.Host.UseSerilog();
 
+// Redis baðlantýsý
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect("localhost:6379"));
 
+// Veritabaný baðlantýsý
 builder.Services.AddDbContext<FinanceContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -34,6 +35,8 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    options.RequireHttpsMetadata = false; // HTTP üzerinden çalýþýrken false olabilir, prod'da true olmalý
+    options.SaveToken = true; // Token'ý kaydetmek için
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -42,10 +45,12 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"])),
+        ClockSkew = TimeSpan.Zero // Token süresi tam olarak dolduðunda hemen devre dýþý býrakmak için
     };
 });
 
+// Swagger yapýlandýrmasý
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
@@ -83,8 +88,21 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddControllers();
 
+// CORS yapýlandýrmasý (Belirli kaynaklardan gelen talepleri kabul et)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+
 var app = builder.Build();
 
+// Geliþtirme ortamýnda Swagger'ý etkinleþtir
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -96,11 +114,16 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// CORS'u devreye al (Belirli kaynaklara izin ver)
+app.UseCors("AllowAll");
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
+// Uygulama baþlatýlýrken hata yakalama ve loglama
 try
 {
     Log.Information("Uygulama baþlatýlýyor...");

@@ -58,9 +58,11 @@
 </template>
 
 <script>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
+import axios from "axios";
 
 export default {
   components: {
@@ -68,39 +70,34 @@ export default {
     Column,
   },
   setup() {
+    const route = useRoute();
+    const invoiceId = route.params.id;
     const invoice = ref(null);
 
-    // Test amaçlı fatura detayları
-    const testInvoices = [
-      {
-        id: 1,
-        customer: "Müşteri A",
-        status: "Onaylandı",
-        totalAmount: 1500,
-        items: [
-          { name: "Ürün 1", quantity: 2, price: 300, total: 600 },
-          { name: "Ürün 2", quantity: 1, price: 900, total: 900 },
-        ],
-      },
-      {
-        id: 2,
-        customer: "Müşteri B",
-        status: "Taslak",
-        totalAmount: 2300,
-        items: [{ name: "Ürün 3", quantity: 1, price: 2300, total: 2300 }],
-      },
-    ];
+    onMounted(async () => {
+      const token = localStorage.getItem("token");
 
-    // Manuel olarak test verilerini kullan
-    const loadInvoice = (id) => {
-      const foundInvoice = testInvoices.find((inv) => inv.id === id);
-      invoice.value = foundInvoice || null;
-    };
+      if (!token) {
+        alert("Yetkilendirme hatası: Token bulunamadı.");
+        return;
+      }
 
-    // Test amacıyla ID 1 olan faturayı yükle
-    loadInvoice(1);
+      try {
+        const response = await axios.get(
+          `https://localhost:7093/api/Invoice/${invoiceId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        invoice.value = response.data;
+      } catch (error) {
+        console.error("Fatura detayları yüklenirken hata oluştu:", error);
+        alert("Fatura detayları yüklenirken bir hata oluştu.");
+      }
+    });
 
-    // Durum sınıfını belirlemek için fonksiyon
     const statusClass = (status) => {
       if (status === "Onaylandı") return "approved-status";
       if (status === "Taslak") return "draft-status";
@@ -116,15 +113,6 @@ export default {
 h1 {
   color: #f40002;
   font-family: "Montserrat", sans-serif;
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-}
-
-h2 {
-  font-family: "Montserrat", sans-serif;
-  font-size: 1.8rem;
-  margin-top: 1rem;
-  color: #2c3e50;
 }
 
 .approved-status {
@@ -133,7 +121,7 @@ h2 {
 }
 
 .draft-status {
-  color: yellow;
+  color: #ffcc00;
   font-weight: bold;
 }
 
@@ -146,23 +134,10 @@ h2 {
   background-color: #a9a9a9 !important;
   color: #2c2c2c;
   font-weight: bold;
-  font-family: "Montserrat", sans-serif;
-  font-size: 1.2rem;
 }
 
 .p-datatable-tbody > tr > td {
   background-color: #dcdcdc !important;
   border: 1px solid #b0b0b0;
-}
-
-.p-datatable.custom-table {
-  border-radius: 10px;
-  padding: 20px;
-}
-
-p {
-  font-family: "Roboto", sans-serif;
-  font-size: 1.2rem;
-  color: #2c2c2c;
 }
 </style>

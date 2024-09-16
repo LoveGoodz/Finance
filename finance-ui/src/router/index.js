@@ -1,28 +1,46 @@
 import { createRouter, createWebHistory } from "vue-router";
-import InvoicesList from "../views/InvoicesList.vue";
+import InvoiceList from "../views/InvoiceList.vue";
 import InvoiceDetails from "../views/InvoiceDetails.vue";
+import InvoiceCreate from "../views/InvoiceCreate.vue";
+import LoginPage from "../views/LoginPage.vue";
 
 const routes = [
   {
-    path: "/",
-    redirect: "/invoices",
-  },
-  {
-    path: "/invoices",
-    name: "InvoicesList",
-    component: InvoicesList,
+    path: "/invoice",
+    name: "invoice-list",
+    component: InvoiceList,
   },
   {
     path: "/invoice/:id",
-    name: "InvoiceDetails",
+    name: "invoice-details",
     component: InvoiceDetails,
-    props: true,
+  },
+  {
+    path: "/invoice/create",
+    name: "invoice-create",
+    component: InvoiceCreate,
+  },
+  {
+    path: "/login",
+    name: "login-page",
+    component: LoginPage,
   },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+router.beforeEach((to, from, next) => {
+  const publicPages = ["/login"];
+  const authRequired = !publicPages.includes(to.path);
+  const token = localStorage.getItem("token");
+
+  if (authRequired && !token) {
+    return next("/login");
+  }
+  next();
 });
 
 export default router;
