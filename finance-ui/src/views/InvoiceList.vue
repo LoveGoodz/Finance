@@ -4,7 +4,7 @@
 
     <DataTable :value="invoices" v-if="invoices.length > 0">
       <Column field="id" header="ID"></Column>
-      <Column field="customer" header="Müşteri"></Column>
+      <Column field="customer.name" header="Müşteri"></Column>
       <Column field="totalAmount" header="Toplam"></Column>
       <Column header="Durum">
         <template #body="slotProps">
@@ -50,7 +50,6 @@ export default {
     const invoices = ref([]);
     const router = useRouter();
 
-    // Sayfa yüklendiğinde veriyi çek
     onMounted(async () => {
       const token = localStorage.getItem("token");
       try {
@@ -62,14 +61,13 @@ export default {
             },
           }
         );
-        invoices.value = response.data.Data;
+        invoices.value = response.data;
       } catch (error) {
         console.error("Faturalar yüklenirken hata oluştu:", error);
         alert("Fatura yüklenemedi!");
       }
     });
 
-    // Detay sayfasına yönlendir
     const viewInvoice = (id) => {
       router.push(`/invoice/${id}`);
     };
@@ -86,7 +84,6 @@ h1 {
   margin-bottom: 1rem;
 }
 
-/* Durum renkleri */
 .status-approved {
   color: green;
   font-weight: bold;
@@ -102,7 +99,6 @@ h1 {
   font-weight: bold;
 }
 
-/* Tablo başlık ve gövde stilleri */
 .p-datatable-thead > tr > th {
   background-color: #c0c0c0;
   font-weight: bold;
@@ -113,7 +109,6 @@ h1 {
   background-color: #e0e0e0;
 }
 
-/* Buton stili */
 .p-button {
   background-color: #fffdd0;
   color: #b87333;

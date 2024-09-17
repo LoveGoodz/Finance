@@ -3,7 +3,8 @@
     <h1>Fatura Detayları</h1>
 
     <div v-if="invoice">
-      <h2>Müşteri: {{ invoice.customer }}</h2>
+      <h2>Müşteri: {{ invoice.customer.name }}</h2>
+      <h3>Şirket: {{ invoice.company.name }}</h3>
       <p>
         Fatura Durumu:
         <span :class="statusClass(invoice.status)">
@@ -11,11 +12,12 @@
         </span>
       </p>
       <p>Toplam Tutar: {{ invoice.totalAmount }} TL</p>
+      <p>Fatura Tarihi: {{ invoice.invoiceDate }}</p>
 
       <h3>Ürünler</h3>
-      <DataTable :value="invoice.items" class="custom-table">
+      <DataTable :value="invoice.invoiceDetails" class="custom-table">
         <Column
-          field="name"
+          field="stock.name"
           header="Ürün Adı"
           :headerStyle="{
             fontWeight: 'bold',

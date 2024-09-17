@@ -20,9 +20,9 @@
 </template>
 
 <script>
-import { ref } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import { ref } from "vue";
 
 export default {
   setup() {
@@ -36,22 +36,28 @@ export default {
         const response = await axios.post(
           "https://localhost:7093/api/Auth/login",
           {
-            username: username.value, // form yerine doğrudan username.value kullanıyoruz
-            password: password.value, // form yerine doğrudan password.value kullanıyoruz
+            username: username.value,
+            password: password.value,
           }
         );
 
         const token = response.data.Token;
+
         localStorage.setItem("token", token);
 
         router.push("/invoice");
       } catch (error) {
-        console.error("Login hatası:", error);
+        console.error("Giriş hatası:", error);
         errorMessage.value = "Geçersiz kullanıcı adı veya şifre.";
       }
     };
 
-    return { username, password, errorMessage, login };
+    return {
+      username,
+      password,
+      errorMessage,
+      login,
+    };
   },
 };
 </script>

@@ -6,11 +6,19 @@
 
     <form @submit.prevent="createInvoice" v-if="!loading">
       <div>
-        <label for="customer">Müşteri Adı:</label>
-        <input type="text" id="customer" v-model="invoice.customer" required />
+        <label for="customerID">Müşteri Seçin:</label>
+        <select id="customerID" v-model="invoice.customerID" required>
+          <option
+            v-for="customer in customers"
+            :key="customer.id"
+            :value="customer.id"
+          >
+            {{ customer.name }}
+          </option>
+        </select>
 
-        <p v-if="!invoice.customer && formSubmitted" class="error">
-          Müşteri adı zorunludur.
+        <p v-if="!invoice.customerID && formSubmitted" class="error">
+          Müşteri seçimi zorunludur.
         </p>
       </div>
 
@@ -24,7 +32,7 @@
 
       <h3>Ürünler</h3>
       <div
-        v-for="(item, index) in invoice.items"
+        v-for="(item, index) in invoice.invoiceDetails"
         :key="index"
         class="product-item"
       >
@@ -56,16 +64,16 @@
 </template>
 
 <script>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 
 export default {
   setup() {
     const invoice = ref({
-      customer: "",
+      customerID: null,
       status: "Taslak",
-      items: [
+      invoiceDetails: [
         {
           name: "",
           quantity: 1,
@@ -76,10 +84,28 @@ export default {
 
     const loading = ref(false);
     const formSubmitted = ref(false);
+    const customers = ref([]);
     const router = useRouter();
 
+    onMounted(async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          "https://localhost:7093/api/Customer",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        customers.value = response.data;
+      } catch (error) {
+        console.error("Müşteriler yüklenirken hata oluştu:", error);
+      }
+    });
+
     const addItem = () => {
-      invoice.value.items.push({
+      invoice.value.invoiceDetails.push({
         name: "",
         quantity: 1,
         price: 0,
@@ -87,13 +113,13 @@ export default {
     };
 
     const removeItem = (index) => {
-      invoice.value.items.splice(index, 1);
+      invoice.value.invoiceDetails.splice(index, 1);
     };
 
     const createInvoice = async () => {
       formSubmitted.value = true;
 
-      if (!invoice.value.customer) {
+      if (!invoice.value.customerID) {
         return;
       }
 
@@ -127,6 +153,7 @@ export default {
       formSubmitted,
       addItem,
       removeItem,
+      customers,
       createInvoice,
     };
   },

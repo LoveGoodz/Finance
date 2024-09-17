@@ -2,9 +2,16 @@ import { createRouter, createWebHistory } from "vue-router";
 import InvoiceList from "../views/InvoiceList.vue";
 import InvoiceDetails from "../views/InvoiceDetails.vue";
 import InvoiceCreate from "../views/InvoiceCreate.vue";
+import CustomerCreate from "../views/CustomerCreate.vue";
+import CustomerList from "../views/CustomerList.vue";
 import LoginPage from "../views/LoginPage.vue";
 
 const routes = [
+  {
+    path: "/",
+    name: "login-page",
+    component: LoginPage,
+  },
   {
     path: "/invoice",
     name: "invoice-list",
@@ -21,8 +28,18 @@ const routes = [
     component: InvoiceCreate,
   },
   {
+    path: "/customer/create",
+    name: "customer-create",
+    component: CustomerCreate,
+  },
+  {
+    path: "/customer",
+    name: "customer-list",
+    component: CustomerList,
+  },
+  {
     path: "/login",
-    name: "login-page",
+    name: "login-page-alias",
     component: LoginPage,
   },
 ];
@@ -33,7 +50,7 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  const publicPages = ["/login"];
+  const publicPages = ["/", "/login"];
   const authRequired = !publicPages.includes(to.path);
   const token = localStorage.getItem("token");
 
