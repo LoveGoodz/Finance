@@ -46,7 +46,7 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"])),
-        ClockSkew = TimeSpan.Zero // Token süresi tam olarak dolduðunda hemen devre dýþý býrakmak için
+        ClockSkew = TimeSpan.Zero 
     };
 });
 

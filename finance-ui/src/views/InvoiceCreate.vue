@@ -2,160 +2,102 @@
   <div>
     <h1>Fatura Oluştur</h1>
 
-    <div v-if="loading">Fatura oluşturuluyor, lütfen bekleyin...</div>
-
-    <form @submit.prevent="createInvoice" v-if="!loading">
+    <form @submit.prevent="createInvoice">
       <div>
-        <label for="customerID">Müşteri Seçin:</label>
-        <select id="customerID" v-model="invoice.customerID" required>
-          <option
-            v-for="customer in customers"
-            :key="customer.id"
-            :value="customer.id"
-          >
-            {{ customer.name }}
-          </option>
-        </select>
-
-        <p v-if="!invoice.customerID && formSubmitted" class="error">
-          Müşteri seçimi zorunludur.
-        </p>
+        <label for="customerID">Müşteri ID:</label>
+        <input
+          type="number"
+          id="customerID"
+          v-model="invoice.customerID"
+          required
+        />
       </div>
 
       <div>
-        <label for="status">Fatura Durumu:</label>
-        <select id="status" v-model="invoice.status" required>
-          <option value="Taslak">Taslak</option>
-          <option value="Onaylandı">Onaylandı</option>
-        </select>
-      </div>
-
-      <h3>Ürünler</h3>
-      <div
-        v-for="(item, index) in invoice.invoiceDetails"
-        :key="index"
-        class="product-item"
-      >
-        <input
-          type="text"
-          v-model="item.name"
-          placeholder="Ürün Adı"
-          required
-        />
+        <label for="companyID">Şirket ID:</label>
         <input
           type="number"
-          v-model="item.quantity"
-          placeholder="Adet"
+          id="companyID"
+          v-model="invoice.companyID"
           required
         />
-        <input
-          type="number"
-          v-model="item.price"
-          placeholder="Birim Fiyat"
-          required
-        />
-        <button type="button" @click="removeItem(index)">Ürünü Kaldır</button>
       </div>
 
-      <button type="button" @click="addItem">Ürün Ekle</button>
+      <div>
+        <label for="invoiceDate">Fatura Tarihi:</label>
+        <input
+          type="date"
+          id="invoiceDate"
+          v-model="invoice.invoiceDate"
+          required
+        />
+      </div>
+
+      <div>
+        <label for="totalAmount">Toplam Tutar:</label>
+        <input
+          type="number"
+          id="totalAmount"
+          v-model="invoice.totalAmount"
+          required
+        />
+      </div>
+
       <button type="submit">Fatura Oluştur</button>
+
+      <p v-if="successMessage" class="success">{{ successMessage }}</p>
+      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
     </form>
   </div>
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
 import axios from "axios";
-import { useRouter } from "vue-router";
 
 export default {
-  setup() {
-    const invoice = ref({
-      customerID: null,
-      status: "Taslak",
-      invoiceDetails: [
-        {
-          name: "",
-          quantity: 1,
-          price: 0,
-        },
-      ],
-    });
-
-    const loading = ref(false);
-    const formSubmitted = ref(false);
-    const customers = ref([]);
-    const router = useRouter();
-
-    onMounted(async () => {
+  data() {
+    return {
+      invoice: {
+        customerID: null,
+        companyID: 1, // Geçici Şirket ID
+        invoiceDate: new Date().toISOString().slice(0, 10), // Bugünün tarihi
+        totalAmount: 0,
+      },
+      successMessage: "",
+      errorMessage: "",
+    };
+  },
+  methods: {
+    async createInvoice() {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get(
-          "https://localhost:7093/api/Customer",
+
+        if (!token) {
+          this.errorMessage = "Yetkilendirme hatası.";
+          return;
+        }
+
+        // response'u kullanarak işlem yapalım
+        const response = await axios.post(
+          "https://localhost:7093/api/Invoice",
+          this.invoice,
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }
         );
-        customers.value = response.data;
-      } catch (error) {
-        console.error("Müşteriler yüklenirken hata oluştu:", error);
-      }
-    });
 
-    const addItem = () => {
-      invoice.value.invoiceDetails.push({
-        name: "",
-        quantity: 1,
-        price: 0,
-      });
-    };
-
-    const removeItem = (index) => {
-      invoice.value.invoiceDetails.splice(index, 1);
-    };
-
-    const createInvoice = async () => {
-      formSubmitted.value = true;
-
-      if (!invoice.value.customerID) {
-        return;
-      }
-
-      loading.value = true;
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          alert("Yetkilendirme hatası: Lütfen tekrar giriş yapın.");
-          return;
-        }
-
-        await axios.post("https://localhost:7093/api/Invoice", invoice.value, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        alert("Fatura başarıyla oluşturuldu!");
-
-        router.push("/invoice");
+        // Gelen response içindeki bilgileri kullan
+        this.successMessage = `Fatura başarıyla oluşturuldu! Fatura ID: ${response.data.id}, Tutar: ${response.data.totalAmount}`;
+        this.errorMessage = ""; // Başarı olduğunda hata mesajını temizle
       } catch (error) {
         console.error("Fatura oluşturulurken hata oluştu:", error);
-        alert("Fatura oluşturulamadı!");
-      } finally {
-        loading.value = false;
+        this.errorMessage =
+          "Fatura oluşturulurken hata oluştu: " + error.message;
+        this.successMessage = "";
       }
-    };
-
-    return {
-      invoice,
-      loading,
-      formSubmitted,
-      addItem,
-      removeItem,
-      customers,
-      createInvoice,
-    };
+    },
   },
 };
 </script>

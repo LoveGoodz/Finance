@@ -6,17 +6,15 @@
 </template>
 
 <style>
-/* Arka plan ve yazı tipleri */
 body {
-  background-color: #87ceeb; /* Deniz mavisi arka plan */
+  background-color: #87ceeb;
   margin: 0;
   padding: 0;
-  font-family: "Roboto", sans-serif; /* Roboto yazı tipi */
+  font-family: "Roboto", sans-serif;
 }
 
-/* Genel uygulama stili */
 #app {
-  font-family: "Montserrat", sans-serif; /* Genel yazı tipi Montserrat */
+  font-family: "Montserrat", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;

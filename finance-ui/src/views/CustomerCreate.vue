@@ -9,13 +9,20 @@
       </div>
 
       <div class="form-group">
-        <label for="companyId">Şirket ID:</label>
-        <input
-          type="number"
-          id="companyId"
-          v-model="customer.companyId"
-          required
-        />
+        <label for="companyId">Şirket:</label>
+        <select id="companyId" v-model="customer.companyId" required>
+          <option disabled value="">Şirket Seçin</option>
+          <option
+            v-for="company in companies"
+            :key="company.id"
+            :value="company.id"
+          >
+            {{ company.name }}
+          </option>
+        </select>
+        <p v-if="!customer.companyId && formSubmitted" class="error">
+          Şirket seçimi zorunludur.
+        </p>
       </div>
 
       <div class="form-group">
@@ -48,35 +55,51 @@
 
 <script>
 import axios from "axios";
+import { ref, onMounted } from "vue";
 
 export default {
-  data() {
-    return {
-      customer: {
-        name: "",
-        companyId: null,
-        address: "",
-        phoneNumber: "",
-        email: "",
-      },
-      errorMessage: "",
-      successMessage: "",
-    };
-  },
-  methods: {
-    async createCustomer() {
+  setup() {
+    const customer = ref({
+      name: "",
+      companyId: null,
+      address: "",
+      phoneNumber: "",
+      email: "",
+    });
+    const companies = ref([]);
+    const errorMessage = ref("");
+    const successMessage = ref("");
+    const formSubmitted = ref(false);
+
+    onMounted(async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get("https://localhost:7093/api/Company", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        companies.value = response.data;
+      } catch (error) {
+        console.error("Şirketler yüklenirken hata oluştu:", error);
+        errorMessage.value = "Şirketler yüklenemedi.";
+      }
+    });
+
+    const createCustomer = async () => {
+      formSubmitted.value = true;
       try {
         const token = localStorage.getItem("token");
 
         if (!token) {
-          this.errorMessage =
+          errorMessage.value =
             "Yetkilendirme hatası: Lütfen tekrar giriş yapın.";
           return;
         }
 
         const response = await axios.post(
           "https://localhost:7093/api/Customer",
-          this.customer,
+          customer.value,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -84,24 +107,34 @@ export default {
           }
         );
 
-        this.successMessage = `Müşteri başarıyla eklendi! Müşteri ID: ${response.data.id}, Müşteri Adı: ${response.data.name}`;
-        this.errorMessage = "";
-        this.resetForm();
+        successMessage.value = `Müşteri başarıyla eklendi! Müşteri ID: ${response.data.id}`;
+        errorMessage.value = "";
+        resetForm();
       } catch (error) {
         console.error("Müşteri eklenirken hata oluştu:", error);
-        this.successMessage = "";
-        this.errorMessage = "Müşteri eklenirken hata oluştu: " + error.message;
+        errorMessage.value = "Müşteri eklenirken hata oluştu: " + error.message;
       }
-    },
-    resetForm() {
-      this.customer = {
+    };
+
+    const resetForm = () => {
+      customer.value = {
         name: "",
         companyId: null,
         address: "",
         phoneNumber: "",
         email: "",
       };
-    },
+      formSubmitted.value = false;
+    };
+
+    return {
+      customer,
+      companies,
+      errorMessage,
+      successMessage,
+      formSubmitted,
+      createCustomer,
+    };
   },
 };
 </script>
@@ -130,7 +163,8 @@ label {
   font-weight: bold;
 }
 
-input {
+input,
+select {
   width: 100%;
   padding: 10px;
   border-radius: 5px;

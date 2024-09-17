@@ -5,6 +5,8 @@ import InvoiceCreate from "../views/InvoiceCreate.vue";
 import CustomerCreate from "../views/CustomerCreate.vue";
 import CustomerList from "../views/CustomerList.vue";
 import LoginPage from "../views/LoginPage.vue";
+import CompanyList from "../views/CompanyList.vue"; // CompanyList sayfası
+import CompanyCreate from "../views/CompanyCreate.vue"; // CompanyCreate sayfası
 
 const routes = [
   {
@@ -36,6 +38,16 @@ const routes = [
     path: "/customer",
     name: "customer-list",
     component: CustomerList,
+  },
+  {
+    path: "/company",
+    name: "company-list",
+    component: CompanyList, // Şirket Listesi rotası
+  },
+  {
+    path: "/company/create",
+    name: "company-create",
+    component: CompanyCreate, // Yeni Şirket Oluştur rotası
   },
   {
     path: "/login",

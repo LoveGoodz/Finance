@@ -41,11 +41,19 @@ export default {
           }
         );
 
-        const token = response.data.Token;
+        console.log("API Yanıtı:", response.data); // API'den gelen tüm yanıtı logla
 
-        localStorage.setItem("token", token);
+        // Doğru token alanını kontrol et ve kaydet
+        const token = response.data.Token || response.data.token;
+        console.log("Alınan Token:", token); // Token'ı logla
 
-        router.push("/invoice");
+        if (token) {
+          localStorage.setItem("token", token);
+          console.log("Token başarıyla localStorage'a kaydedildi.");
+          router.push("/invoice");
+        } else {
+          throw new Error("Token alınamadı. Lütfen tekrar deneyin.");
+        }
       } catch (error) {
         console.error("Giriş hatası:", error);
         errorMessage.value = "Geçersiz kullanıcı adı veya şifre.";
