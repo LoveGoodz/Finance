@@ -16,20 +16,20 @@ namespace Finance.Controllers
         }
 
         // Redis'e veri keyleme
-        [HttpGet("set")]
+        [HttpPost("set")]
         public async Task<IActionResult> SetCache(string key, string value)
         {
             var db = _redis.GetDatabase();
             TimeSpan expiryTime = TimeSpan.FromMinutes(60); // 60 dakika sonra cache otomatik olarak silinecek
             try
             {
-                await db.StringSetAsync(key, value, expiryTime);  
-                Log.Information("Set cache key: {Key} with value: {Value}", key, value);
+                await db.StringSetAsync(key, value, expiryTime);
+                Log.Information("Cache set for key: {Key} with value: {Value}", key, value); // Loglama
                 return Ok("Value set in Redis");
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error setting cache key: {Key}", key);
+                Log.Error(ex, "Error setting cache for key: {Key}", key); // Hata loglama
                 return StatusCode(500, "Error setting cache");
             }
         }
@@ -41,18 +41,18 @@ namespace Finance.Controllers
             var db = _redis.GetDatabase();
             try
             {
-                var value = await db.StringGetAsync(key); 
+                var value = await db.StringGetAsync(key);
                 if (!value.HasValue)
                 {
-                    Log.Warning("Cache key not found: {Key}", key);
+                    Log.Warning("Cache key not found: {Key}", key); // Uyarı loglama
                     return NotFound("Key not found");
                 }
-                Log.Information("Retrieved cache key: {Key} with value: {Value}", key, value.ToString());
+                Log.Information("Cache retrieved for key: {Key} with value: {Value}", key, value.ToString()); // Başarı loglama
                 return Ok(value.ToString());
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error retrieving cache key: {Key}", key);
+                Log.Error(ex, "Error retrieving cache for key: {Key}", key); // Hata loglama
                 return StatusCode(500, "Error retrieving cache");
             }
         }

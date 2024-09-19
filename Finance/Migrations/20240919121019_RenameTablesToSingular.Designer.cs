@@ -4,6 +4,7 @@ using Finance.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Finance.Migrations
 {
     [DbContext(typeof(FinanceContext))]
-    partial class FinanceContextModelSnapshot : ModelSnapshot
+    [Migration("20240919121019_RenameTablesToSingular")]
+    partial class RenameTablesToSingular
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -145,7 +148,7 @@ namespace Finance.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("CompanyID")
+                    b.Property<int>("CompanyID")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
@@ -371,7 +374,9 @@ namespace Finance.Migrations
                 {
                     b.HasOne("Company", "Company")
                         .WithMany("Customers")
-                        .HasForeignKey("CompanyID");
+                        .HasForeignKey("CompanyID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Company");
                 });

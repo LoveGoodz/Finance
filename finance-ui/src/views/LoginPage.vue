@@ -41,11 +41,10 @@ export default {
           }
         );
 
-        console.log("API Yanıtı:", response.data); // API'den gelen tüm yanıtı logla
+        console.log("API Yanıtı:", response.data);
 
-        // Doğru token alanını kontrol et ve kaydet
         const token = response.data.Token || response.data.token;
-        console.log("Alınan Token:", token); // Token'ı logla
+        console.log("Alınan Token:", token);
 
         if (token) {
           localStorage.setItem("token", token);

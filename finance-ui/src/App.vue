@@ -1,6 +1,12 @@
 <template>
   <nav>
     <router-link to="/invoice">Fatura Listesi</router-link>
+    <router-link to="/invoice/create">Fatura Oluştur</router-link>
+    <router-link to="/customer">Müşteri Listesi</router-link>
+    <router-link to="/customer/create">Müşteri Ekle</router-link>
+    <router-link to="/company">Şirket Listesi</router-link>
+    <router-link to="/company/create">Şirket Ekle</router-link>
+    <router-link to="/login">Çıkış Yap</router-link>
   </nav>
   <router-view />
 </template>

@@ -53,15 +53,12 @@ export default {
     onMounted(async () => {
       const token = localStorage.getItem("token");
       try {
-        const response = await axios.get(
-          "https://localhost:7093/api/Invoice/all",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        invoices.value = response.data;
+        const response = await axios.get("https://localhost:7093/api/Invoice", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        invoices.value = response.data.data;
       } catch (error) {
         console.error("Faturalar yüklenirken hata oluştu:", error);
         alert("Fatura yüklenemedi!");

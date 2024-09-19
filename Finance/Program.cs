@@ -21,8 +21,9 @@ builder.Host.UseSerilog();
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect("localhost:6379"));
 
 // Veritabaný baðlantýsý
+var connectionString = "Server=localhost;Database=Finance;Trusted_Connection=True;TrustServerCertificate=True;";
 builder.Services.AddDbContext<FinanceContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(connectionString));
 
 // JWT ayarlarýný appsettings.json'dan al
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -35,8 +36,8 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = false; // HTTP üzerinden çalýþýrken false olabilir, prod'da true olmalý
-    options.SaveToken = true; // Token'ý kaydetmek için
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -46,7 +47,7 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"])),
-        ClockSkew = TimeSpan.Zero 
+        ClockSkew = TimeSpan.Zero // Token süresi dolduðunda tolerans olmadan hemen expire eder.
     };
 });
 
@@ -86,9 +87,10 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+
 builder.Services.AddControllers();
 
-// CORS yapýlandýrmasý (Belirli kaynaklardan gelen talepleri kabul et)
+// CORS yapýlandýrmasý 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -98,7 +100,6 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 });
-
 
 var app = builder.Build();
 
@@ -113,14 +114,17 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+// HTTPS yönlendirme
 app.UseHttpsRedirection();
 
-// CORS'u devreye al (Belirli kaynaklara izin ver)
+// CORS'u devreye al 
 app.UseCors("AllowAll");
 
+// Kimlik doðrulama ve yetkilendirme
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Controller'larý yapýlandýrma
 app.MapControllers();
 
 // Uygulama baþlatýlýrken hata yakalama ve loglama

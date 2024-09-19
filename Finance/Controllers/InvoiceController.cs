@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Finance.Controllers
 {
-    [Authorize] // JWT doğrulaması
+    [Authorize] 
     [Route("api/[controller]")]
     [ApiController]
     public class InvoiceController : ControllerBase
@@ -20,20 +20,7 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/Invoice/all - Tüm faturaları listele, sayfalama ve filtreleme olmadan
-        [HttpGet("all")]
-        public async Task<ActionResult<IEnumerable<Invoice>>> GetAllInvoices()
-        {
-            var invoices = await _context.Invoices.ToListAsync();
-            if (!invoices.Any())
-            {
-                return NotFound(new { Message = "Hiç fatura bulunamadı." });
-            }
-
-            return Ok(new { Message = "Tüm faturalar listelendi.", Data = invoices });
-        }
-
-        // GET: api/Invoice/{id} - ID'ye göre fatura getirir
+        // GET: api/Invoice/{id} 
         [HttpGet("{id}")]
         public async Task<ActionResult<Invoice>> GetInvoiceById(int id)
         {
@@ -47,7 +34,7 @@ namespace Finance.Controllers
             return Ok(invoice);
         }
 
-        // POST: api/Invoice - Yeni fatura ekler (Fiş Taslağı)
+        // POST: api/Invoice 
         [HttpPost]
         public async Task<ActionResult<Invoice>> PostInvoice(Invoice invoice)
         {
@@ -66,7 +53,7 @@ namespace Finance.Controllers
             return CreatedAtAction(nameof(GetInvoiceById), new { id = invoice.ID }, invoice);
         }
 
-        // PUT: api/Invoice/approve/{id} - Fişi onaylama ve StockTrans, ActTrans işlemleri
+        // PUT: api/Invoice/approve/{id} 
         [HttpPut("approve/{id}")]
         public async Task<IActionResult> ApproveInvoice(int id)
         {
@@ -118,7 +105,7 @@ namespace Finance.Controllers
             return Ok(new { Message = "Fatura başarıyla onaylandı.", Invoice = invoice });
         }
 
-        // PUT: api/Invoice/{id} - Fatura güncelleme
+        // PUT: api/Invoice/{id} 
         [HttpPut("{id}")]
         public async Task<IActionResult> PutInvoice(int id, Invoice invoice)
         {
@@ -153,7 +140,7 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // DELETE: api/Invoice/{id} - Fatura silme
+        // DELETE: api/Invoice/{id} 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteInvoice(int id)
         {
@@ -174,7 +161,7 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // GET: api/Invoice - Filtreleme ve sayfalama
+        // GET: api/Invoice 
         [HttpGet]
         public async Task<ActionResult> GetInvoices(string series = null, int pageNumber = 1, int pageSize = 10)
         {
@@ -185,16 +172,16 @@ namespace Finance.Controllers
 
             var query = _context.Invoices.AsQueryable();
 
-            // Fatura serisine göre filtreleme
+            
             if (!string.IsNullOrEmpty(series))
             {
                 query = query.Where(i => i.Series.Contains(series));
             }
 
-            // Toplam kayıt sayısı
+            
             var totalRecords = await query.CountAsync();
 
-            // Sayfalama
+            
             var invoices = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -203,7 +190,7 @@ namespace Finance.Controllers
             return Ok(new { TotalRecords = totalRecords, Data = invoices });
         }
 
-        // Yardımcı metot: Veritabanında fatura var mı kontrolü
+        
         private bool InvoiceExists(int id)
         {
             return _context.Invoices.Any(e => e.ID == id);

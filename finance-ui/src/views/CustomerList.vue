@@ -41,14 +41,14 @@ export default {
       const token = localStorage.getItem("token");
       try {
         const response = await axios.get(
-          "https://localhost:7093/api/Customer/all",
+          "https://localhost:7093/api/Customer",
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }
         );
-        customers.value = response.data;
+        customers.value = response.data.data;
       } catch (error) {
         console.error("Müşteri listesi yüklenirken hata oluştu:", error);
         alert("Müşteri listesi yüklenemedi!");

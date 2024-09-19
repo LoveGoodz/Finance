@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Finance.Migrations
 {
     [DbContext(typeof(FinanceContext))]
-    [Migration("20240916083323_InitialMigration")]
-    partial class InitialMigration
+    [Migration("20240919185505_AddForeignKeyRelations")]
+    partial class AddForeignKeyRelations
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -55,7 +55,7 @@ namespace Finance.Migrations
 
                     b.HasIndex("InvoiceID");
 
-                    b.ToTable("ActTrans");
+                    b.ToTable("ActTran", (string)null);
                 });
 
             modelBuilder.Entity("Balance", b =>
@@ -98,7 +98,7 @@ namespace Finance.Migrations
 
                     b.HasIndex("StockID");
 
-                    b.ToTable("Balances");
+                    b.ToTable("Balance", (string)null);
                 });
 
             modelBuilder.Entity("Company", b =>
@@ -133,7 +133,7 @@ namespace Finance.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Companies");
+                    b.ToTable("Company", (string)null);
                 });
 
             modelBuilder.Entity("Customer", b =>
@@ -173,7 +173,7 @@ namespace Finance.Migrations
 
                     b.HasIndex("CompanyID");
 
-                    b.ToTable("Customers");
+                    b.ToTable("Customer", (string)null);
                 });
 
             modelBuilder.Entity("Invoice", b =>
@@ -216,7 +216,7 @@ namespace Finance.Migrations
 
                     b.HasIndex("CustomerID");
 
-                    b.ToTable("Invoices");
+                    b.ToTable("Invoice", (string)null);
                 });
 
             modelBuilder.Entity("InvoiceDetails", b =>
@@ -288,7 +288,7 @@ namespace Finance.Migrations
 
                     b.HasIndex("CompanyID");
 
-                    b.ToTable("Stocks");
+                    b.ToTable("Stock", (string)null);
                 });
 
             modelBuilder.Entity("StockTrans", b =>
@@ -321,7 +321,7 @@ namespace Finance.Migrations
 
                     b.HasIndex("StockID");
 
-                    b.ToTable("StockTrans");
+                    b.ToTable("StockTran", (string)null);
                 });
 
             modelBuilder.Entity("ActTrans", b =>

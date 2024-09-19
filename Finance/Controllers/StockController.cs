@@ -20,17 +20,7 @@ namespace Finance.Controllers
             _logger = logger;
         }
 
-        // GET: api/Stock/all - Tüm stokları listeler, sayfalama ve filtreleme olmadan
-        [HttpGet("all")]
-        public async Task<ActionResult<IEnumerable<Stock>>> GetAllStocks()
-        {
-            _logger.LogInformation("Tüm stoklar isteniyor.");
-            var stocks = await _context.Stocks.ToListAsync();
-            _logger.LogInformation("Tüm stoklar başarıyla getirildi.");
-            return Ok(new { Message = "Tüm stoklar başarıyla getirildi.", Data = stocks });
-        }
-
-        // GET: api/Stock/5 - Belirli ID'ye göre stok getirir
+        // GET: api/Stock/{id} 
         [HttpGet("{id}")]
         public async Task<ActionResult<Stock>> GetStockById(int id)
         {
@@ -47,7 +37,7 @@ namespace Finance.Controllers
             return Ok(new { Message = "Stok başarıyla getirildi.", Data = stock });
         }
 
-        // PUT: api/Stock/5 - Mevcut stok kaydını günceller
+        // PUT: api/Stock/5 
         [HttpPut("{id}")]
         public async Task<IActionResult> PutStock(int id, Stock stock)
         {
@@ -81,7 +71,7 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // POST: api/Stock - Yeni stok kaydı ekler
+        // POST: api/Stock 
         [HttpPost]
         public async Task<ActionResult<Stock>> PostStock(Stock stock)
         {
@@ -93,7 +83,7 @@ namespace Finance.Controllers
             return CreatedAtAction(nameof(GetStockById), new { id = stock.ID }, new { Message = "Stok başarıyla eklendi.", Data = stock });
         }
 
-        // DELETE: api/Stock/5 - Belirli ID'ye sahip stok kaydını siler
+        // DELETE: api/Stock/5 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteStock(int id)
         {
@@ -112,7 +102,7 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // GET: api/Stock - Filtreleme ve sayfalama ile stokları getirir
+        // GET: api/Stock 
         [HttpGet]
         public async Task<ActionResult> GetStocks(string name = null, int pageNumber = 1, int pageSize = 10)
         {
@@ -125,16 +115,16 @@ namespace Finance.Controllers
             _logger.LogInformation($"Stoklar filtreleniyor: İsim: {name}, Sayfa: {pageNumber}, Sayfa Boyutu: {pageSize}");
             var query = _context.Stocks.AsQueryable();
 
-            // Stok ismi ile filtreleme
+            
             if (!string.IsNullOrEmpty(name))
             {
                 query = query.Where(s => s.Name.Contains(name));
             }
 
-            // Toplam kayıt sayısı
+            
             var totalRecords = await query.CountAsync();
 
-            // Sayfalama işlemi
+            
             var stocks = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)

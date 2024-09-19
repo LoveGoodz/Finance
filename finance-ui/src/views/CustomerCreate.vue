@@ -20,9 +20,6 @@
             {{ company.name }}
           </option>
         </select>
-        <p v-if="!customer.companyId && formSubmitted" class="error">
-          Şirket seçimi zorunludur.
-        </p>
       </div>
 
       <div class="form-group">
@@ -69,37 +66,38 @@ export default {
     const companies = ref([]);
     const errorMessage = ref("");
     const successMessage = ref("");
-    const formSubmitted = ref(false);
 
     onMounted(async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("https://localhost:7093/api/Company", {
+        const response = await axios.get("https://localhost:7093/api/company", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
         companies.value = response.data;
       } catch (error) {
-        console.error("Şirketler yüklenirken hata oluştu:", error);
         errorMessage.value = "Şirketler yüklenemedi.";
       }
     });
 
     const createCustomer = async () => {
-      formSubmitted.value = true;
       try {
         const token = localStorage.getItem("token");
 
-        if (!token) {
-          errorMessage.value =
-            "Yetkilendirme hatası: Lütfen tekrar giriş yapın.";
-          return;
-        }
+        const customerData = {
+          name: customer.value.name,
+          companyId: customer.value.companyId,
+          address: customer.value.address,
+          phoneNumber: customer.value.phoneNumber,
+          email: customer.value.email,
+        };
+
+        console.log("Gönderilen müşteri verileri:", customerData);
 
         const response = await axios.post(
           "https://localhost:7093/api/Customer",
-          customer.value,
+          customerData,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -107,24 +105,20 @@ export default {
           }
         );
 
-        successMessage.value = `Müşteri başarıyla eklendi! Müşteri ID: ${response.data.id}`;
+        console.log("Sunucudan dönen yanıt:", response.data);
+        successMessage.value = `Müşteri başarıyla eklendi! ID: ${response.data.id}`;
         errorMessage.value = "";
-        resetForm();
       } catch (error) {
-        console.error("Müşteri eklenirken hata oluştu:", error);
-        errorMessage.value = "Müşteri eklenirken hata oluştu: " + error.message;
-      }
-    };
+        console.error("Hata ayrıntıları:", error);
 
-    const resetForm = () => {
-      customer.value = {
-        name: "",
-        companyId: null,
-        address: "",
-        phoneNumber: "",
-        email: "",
-      };
-      formSubmitted.value = false;
+        if (error.response) {
+          console.error("Axios hata yanıtı:", error.response);
+          errorMessage.value =
+            "Hatalı istek: " + JSON.stringify(error.response.data);
+        } else {
+          errorMessage.value = "Müşteri eklenirken hata oluştu.";
+        }
+      }
     };
 
     return {
@@ -132,7 +126,6 @@ export default {
       companies,
       errorMessage,
       successMessage,
-      formSubmitted,
       createCustomer,
     };
   },

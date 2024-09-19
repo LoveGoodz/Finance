@@ -18,17 +18,7 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/Balance/all - Tüm verileri listeler, sayfalama ve filtreleme olmadan
-        [HttpGet("all")]
-        public async Task<ActionResult<IEnumerable<Balance>>> GetAllBalances()
-        {
-            Log.Information("Tüm Balance kayıtları listeleniyor.");
-            var balances = await _context.Balances.ToListAsync();
-            Log.Information("{Count} Balance kaydı alındı.", balances.Count);
-            return Ok(balances);
-        }
-
-        // GET: api/Balance/5 - ID'ye göre Balance getirir
+        // GET: api/Balance/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<Balance>> GetBalanceById(int id)
         {
@@ -44,7 +34,7 @@ namespace Finance.Controllers
             return Ok(balance);
         }
 
-        // PUT: api/Balance/5 - Mevcut bir Balance günceller
+        // PUT: api/Balance/5 
         [HttpPut("{id}")]
         public async Task<IActionResult> PutBalance(int id, Balance balance)
         {
@@ -78,7 +68,7 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // POST: api/Balance - Yeni Balance ekler
+        // POST: api/Balance 
         [HttpPost]
         public async Task<ActionResult<Balance>> PostBalance(Balance balance)
         {
@@ -89,7 +79,7 @@ namespace Finance.Controllers
             return CreatedAtAction(nameof(GetBalanceById), new { id = balance.ID }, balance);
         }
 
-        // DELETE: api/Balance/5 - Belirli ID'ye sahip Balance'ı siler
+        // DELETE: api/Balance/5 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBalance(int id)
         {
@@ -108,7 +98,7 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // GET: api/Balance - Sayfalama ve filtreleme ile Balance getirir
+        // GET: api/Balance 
         [HttpGet]
         public async Task<ActionResult> GetBalances(int? companyId = null, int pageNumber = 1, int pageSize = 10)
         {
@@ -122,13 +112,13 @@ namespace Finance.Controllers
 
             var query = _context.Balances.AsQueryable();
 
-            // companyId'ye göre filtreleme
+            
             if (companyId.HasValue)
             {
                 query = query.Where(b => b.CompanyID == companyId);
             }
 
-            // Toplam kayıt sayısı
+            
             var totalRecords = await query.CountAsync();
 
             // Sayfalama işlemi
@@ -141,7 +131,7 @@ namespace Finance.Controllers
             return Ok(new { TotalRecords = totalRecords, Data = balances });
         }
 
-        // Veritabanında Balance olup olmadığını kontrol eden yardımcı metot
+        
         private bool BalanceExists(int id)
         {
             return _context.Balances.Any(e => e.ID == id);

@@ -4,6 +4,7 @@ using Finance.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Finance.Migrations
 {
     [DbContext(typeof(FinanceContext))]
-    partial class FinanceContextModelSnapshot : ModelSnapshot
+    [Migration("20240919115928_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -52,7 +55,7 @@ namespace Finance.Migrations
 
                     b.HasIndex("InvoiceID");
 
-                    b.ToTable("ActTran", (string)null);
+                    b.ToTable("ActTrans");
                 });
 
             modelBuilder.Entity("Balance", b =>
@@ -95,7 +98,7 @@ namespace Finance.Migrations
 
                     b.HasIndex("StockID");
 
-                    b.ToTable("Balance", (string)null);
+                    b.ToTable("Balances");
                 });
 
             modelBuilder.Entity("Company", b =>
@@ -130,7 +133,7 @@ namespace Finance.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Company", (string)null);
+                    b.ToTable("Companies");
                 });
 
             modelBuilder.Entity("Customer", b =>
@@ -145,7 +148,7 @@ namespace Finance.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("CompanyID")
+                    b.Property<int>("CompanyID")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
@@ -170,7 +173,7 @@ namespace Finance.Migrations
 
                     b.HasIndex("CompanyID");
 
-                    b.ToTable("Customer", (string)null);
+                    b.ToTable("Customers");
                 });
 
             modelBuilder.Entity("Invoice", b =>
@@ -213,7 +216,7 @@ namespace Finance.Migrations
 
                     b.HasIndex("CustomerID");
 
-                    b.ToTable("Invoice", (string)null);
+                    b.ToTable("Invoices");
                 });
 
             modelBuilder.Entity("InvoiceDetails", b =>
@@ -285,7 +288,7 @@ namespace Finance.Migrations
 
                     b.HasIndex("CompanyID");
 
-                    b.ToTable("Stock", (string)null);
+                    b.ToTable("Stocks");
                 });
 
             modelBuilder.Entity("StockTrans", b =>
@@ -318,7 +321,7 @@ namespace Finance.Migrations
 
                     b.HasIndex("StockID");
 
-                    b.ToTable("StockTran", (string)null);
+                    b.ToTable("StockTrans");
                 });
 
             modelBuilder.Entity("ActTrans", b =>
@@ -371,7 +374,9 @@ namespace Finance.Migrations
                 {
                     b.HasOne("Company", "Company")
                         .WithMany("Customers")
-                        .HasForeignKey("CompanyID");
+                        .HasForeignKey("CompanyID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Company");
                 });

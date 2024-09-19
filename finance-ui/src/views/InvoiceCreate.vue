@@ -59,8 +59,8 @@ export default {
     return {
       invoice: {
         customerID: null,
-        companyID: 1, // Geçici Şirket ID
-        invoiceDate: new Date().toISOString().slice(0, 10), // Bugünün tarihi
+        companyID: 1,
+        invoiceDate: new Date().toISOString().slice(0, 10),
         totalAmount: 0,
       },
       successMessage: "",
@@ -77,7 +77,6 @@ export default {
           return;
         }
 
-        // response'u kullanarak işlem yapalım
         const response = await axios.post(
           "https://localhost:7093/api/Invoice",
           this.invoice,
@@ -88,9 +87,8 @@ export default {
           }
         );
 
-        // Gelen response içindeki bilgileri kullan
         this.successMessage = `Fatura başarıyla oluşturuldu! Fatura ID: ${response.data.id}, Tutar: ${response.data.totalAmount}`;
-        this.errorMessage = ""; // Başarı olduğunda hata mesajını temizle
+        this.errorMessage = "";
       } catch (error) {
         console.error("Fatura oluşturulurken hata oluştu:", error);
         this.errorMessage =

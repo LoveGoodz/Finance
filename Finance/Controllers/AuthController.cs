@@ -8,6 +8,7 @@ using Serilog;
 namespace Finance.Controllers
 {
     [Route("api/[controller]")]
+    [ApiController] 
     public class AuthController : ControllerBase
     {
         private readonly IConfiguration _configuration;
@@ -26,10 +27,10 @@ namespace Finance.Controllers
                 var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
 
                 var claims = new[] {
-                new Claim(JwtRegisteredClaimNames.Sub, request.Username),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(ClaimTypes.Role, "Admin")
-            };
+                    new Claim(JwtRegisteredClaimNames.Sub, request.Username),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    new Claim(ClaimTypes.Role, "Admin")
+                };
 
                 var tokenDescriptor = new SecurityTokenDescriptor
                 {
@@ -43,9 +44,11 @@ namespace Finance.Controllers
                 var token = tokenHandler.CreateToken(tokenDescriptor);
                 var tokenString = tokenHandler.WriteToken(token);
 
+                Log.Information("Successful login for user: {Username}", request.Username); // Loglama
                 return Ok(new { Token = tokenString });
             }
 
+            Log.Warning("Failed login attempt for user: {Username}", request.Username); // Hatalı giriş loglama
             return Unauthorized("Geçersiz kullanıcı adı veya şifre.");
         }
 

@@ -55,6 +55,16 @@ export default {
       try {
         const token = localStorage.getItem("token");
 
+        if (
+          !company.value.name ||
+          !company.value.address ||
+          !company.value.phoneNumber ||
+          !company.value.email
+        ) {
+          errorMessage.value = "Lütfen tüm alanları doldurun.";
+          return;
+        }
+
         if (!token) {
           errorMessage.value = "Yetkilendirme hatası.";
           return;
