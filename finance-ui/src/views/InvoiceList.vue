@@ -1,80 +1,101 @@
 <template>
-  <div>
+  <div class="invoice-list-container">
     <h1>Fatura Listesi</h1>
 
-    <DataTable :value="invoices" v-if="invoices.length > 0">
-      <Column field="id" header="ID"></Column>
-      <Column field="customer.name" header="Müşteri"></Column>
-      <Column field="totalAmount" header="Toplam"></Column>
-      <Column header="Durum">
-        <template #body="slotProps">
-          <span
-            :class="{
-              'status-approved': slotProps.data.status === 'Onaylandı',
-              'status-draft': slotProps.data.status === 'Taslak',
-              'status-canceled':
-                slotProps.data.status !== 'Onaylandı' &&
-                slotProps.data.status !== 'Taslak',
-            }"
-          >
-            {{ slotProps.data.status }}
-          </span>
-        </template>
-      </Column>
-      <Column header="İşlemler">
-        <template #body="slotProps">
-          <Button label="Detay" @click="viewInvoice(slotProps.data.id)" />
-        </template>
-      </Column>
-    </DataTable>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Müşteri</th>
+          <th>Toplam</th>
+          <th>Durum</th>
+          <th>İşlemler</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="invoice in invoices" :key="invoice.id">
+          <td>{{ invoice.id }}</td>
+          <td>{{ invoice.customer.name }}</td>
+          <td>{{ invoice.totalAmount }}</td>
+          <td>
+            <span
+              :class="{
+                'status-approved': invoice.status === 'Onaylandı',
+                'status-draft': invoice.status === 'Taslak',
+                'status-canceled':
+                  invoice.status !== 'Onaylandı' && invoice.status !== 'Taslak',
+              }"
+            >
+              {{ invoice.status }}
+            </span>
+          </td>
+          <td>
+            <button @click="viewInvoice(invoice.id)" class="btn btn-info">
+              Detay
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
 
     <p v-if="invoices.length === 0">Listelenecek fatura bulunamadı.</p>
   </div>
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
-import DataTable from "primevue/datatable";
-import Column from "primevue/column";
-import Button from "primevue/button";
 import axios from "axios";
-import { useRouter } from "vue-router";
+import { ref, onMounted } from "vue";
 
 export default {
-  components: {
-    DataTable,
-    Column,
-    Button,
-  },
   setup() {
     const invoices = ref([]);
-    const router = useRouter();
 
+    // Fatura listesini yükleme
     onMounted(async () => {
       const token = localStorage.getItem("token");
-      try {
-        const response = await axios.get("https://localhost:7093/api/Invoice", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        invoices.value = response.data.data;
-      } catch (error) {
-        console.error("Faturalar yüklenirken hata oluştu:", error);
-        alert("Fatura yüklenemedi!");
-      }
+      const response = await axios.get("https://localhost:7093/api/Invoice", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      invoices.value = response.data;
     });
 
+    // Fatura detayını görüntüleme
     const viewInvoice = (id) => {
-      router.push(`/invoice/${id}`);
+      window.location.href = `/invoice/${id}`;
     };
 
-    return { invoices, viewInvoice };
+    return {
+      invoices,
+      viewInvoice,
+    };
   },
 };
 </script>
 
 <style scoped>
+.invoice-list-container {
+  padding: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 10px;
+  border: 1px solid #ddd;
+}
+
+th {
+  background-color: #f4f4f4;
+}
+
+td {
+  color: #ff4500; /* Koyu turuncu renk */
+}
+
 h1 {
   color: #ff69b4;
   font-weight: bold;
@@ -96,24 +117,20 @@ h1 {
   font-weight: bold;
 }
 
-.p-datatable-thead > tr > th {
-  background-color: #c0c0c0;
-  font-weight: bold;
-  color: #333;
-}
-
-.p-datatable-tbody > tr > td {
-  background-color: #e0e0e0;
-}
-
-.p-button {
-  background-color: #fffdd0;
-  color: #b87333;
+.btn {
+  padding: 8px 16px;
+  margin: 4px;
   border: none;
-  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
-.p-button:hover {
-  background-color: #ffebb5;
+.btn-info {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.btn:hover {
+  opacity: 0.9;
 }
 </style>
