@@ -2,8 +2,11 @@ import { createRouter, createWebHistory } from "vue-router";
 import InvoiceList from "../views/InvoiceList.vue";
 import InvoiceDetails from "../views/InvoiceDetails.vue";
 import InvoiceCreate from "../views/InvoiceCreate.vue";
+import InvoiceEdit from "../views/InvoiceEdit.vue";
 import CustomerCreate from "../views/CustomerCreate.vue";
 import CustomerList from "../views/CustomerList.vue";
+import CustomerEdit from "../views/CustomerEdit.vue";
+import CustomerDetails from "../views/CustomerDetails.vue"; // CustomerDetails sayfası import edildi
 import LoginPage from "../views/LoginPage.vue";
 import CompanyList from "../views/CompanyList.vue";
 import CompanyCreate from "../views/CompanyCreate.vue";
@@ -31,14 +34,29 @@ const routes = [
     component: InvoiceCreate,
   },
   {
-    path: "/customer/create",
-    name: "customer-create",
-    component: CustomerCreate,
+    path: "/invoice/edit/:id",
+    name: "invoice-edit",
+    component: InvoiceEdit,
   },
   {
     path: "/customer",
     name: "customer-list",
     component: CustomerList,
+  },
+  {
+    path: "/customer/create",
+    name: "customer-create",
+    component: CustomerCreate,
+  },
+  {
+    path: "/customer/edit/:id",
+    name: "customer-edit",
+    component: CustomerEdit,
+  },
+  {
+    path: "/customer/:id", // CustomerDetails sayfası için route tanımlandı
+    name: "customer-details",
+    component: CustomerDetails,
   },
   {
     path: "/company",

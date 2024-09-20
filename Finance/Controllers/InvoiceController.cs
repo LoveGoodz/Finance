@@ -5,10 +5,11 @@ using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Finance.Models;
 
 namespace Finance.Controllers
 {
-    [Authorize] 
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class InvoiceController : ControllerBase
@@ -20,11 +21,15 @@ namespace Finance.Controllers
             _context = context;
         }
 
-        // GET: api/Invoice/{id} 
+        // GET: api/Invoice/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<Invoice>> GetInvoiceById(int id)
         {
-            var invoice = await _context.Invoices.FindAsync(id);
+            var invoice = await _context.Invoices
+                                        .Include(i => i.InvoiceDetails)
+                                        .Include(i => i.Company)
+                                        .Include(i => i.Customer)
+                                        .FirstOrDefaultAsync(i => i.ID == id);
 
             if (invoice == null)
             {
@@ -34,18 +39,34 @@ namespace Finance.Controllers
             return Ok(invoice);
         }
 
-        // POST: api/Invoice 
+        // POST: api/Invoice
+        // Fatura ve detaylarını aynı anda oluşturma
         [HttpPost]
-        public async Task<ActionResult<Invoice>> PostInvoice(Invoice invoice)
+        public async Task<ActionResult<Invoice>> PostInvoice(InvoiceDTO invoiceDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(new { Message = "Geçersiz model verisi.", ModelState });
             }
 
-            // Varsayılan olarak yeni faturalar taslak olarak eklenecek
-            invoice.Status = "Taslak";
-            invoice.CreatedAt = DateTime.UtcNow;
+            var invoice = new Invoice
+            {
+                CustomerID = invoiceDto.CustomerID,
+                CompanyID = invoiceDto.CompanyID,
+                InvoiceDate = invoiceDto.InvoiceDate,
+                TotalAmount = invoiceDto.TotalAmount,
+                Series = invoiceDto.Series,
+                Status = "Taslak",
+                CreatedAt = DateTime.UtcNow,
+                InvoiceDetails = invoiceDto.InvoiceDetails.Select(detail => new InvoiceDetails
+                {
+                    StockID = detail.StockID,
+                    Quantity = detail.Quantity,
+                    UnitPrice = detail.UnitPrice,
+                    TotalPrice = detail.Quantity * detail.UnitPrice,
+                    CreatedAt = DateTime.UtcNow
+                }).ToList()
+            };
 
             _context.Invoices.Add(invoice);
             await _context.SaveChangesAsync();
@@ -53,7 +74,7 @@ namespace Finance.Controllers
             return CreatedAtAction(nameof(GetInvoiceById), new { id = invoice.ID }, invoice);
         }
 
-        // PUT: api/Invoice/approve/{id} 
+        // PUT: api/Invoice/approve/{id}
         [HttpPut("approve/{id}")]
         public async Task<IActionResult> ApproveInvoice(int id)
         {
@@ -105,13 +126,17 @@ namespace Finance.Controllers
             return Ok(new { Message = "Fatura başarıyla onaylandı.", Invoice = invoice });
         }
 
-        // PUT: api/Invoice/{id} 
+        // PUT: api/Invoice/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutInvoice(int id, Invoice invoice)
+        public async Task<IActionResult> PutInvoice(int id, InvoiceDTO invoiceDto)
         {
-            if (id != invoice.ID)
+            var invoice = await _context.Invoices
+                                        .Include(i => i.InvoiceDetails)
+                                        .FirstOrDefaultAsync(i => i.ID == id);
+
+            if (invoice == null)
             {
-                return BadRequest(new { Message = "ID parametresi ile Invoice.ID eşleşmiyor." });
+                return NotFound(new { Message = "Fatura bulunamadı." });
             }
 
             if (invoice.Status == "Onaylandı")
@@ -119,28 +144,20 @@ namespace Finance.Controllers
                 return BadRequest(new { Message = "Onaylanmış faturalar güncellenemez." });
             }
 
-            _context.Entry(invoice).State = EntityState.Modified;
+            // Fatura bilgilerini güncelle
+            invoice.CustomerID = invoiceDto.CustomerID;
+            invoice.CompanyID = invoiceDto.CompanyID;
+            invoice.InvoiceDate = invoiceDto.InvoiceDate;
+            invoice.TotalAmount = invoiceDto.TotalAmount;
+            invoice.Series = invoiceDto.Series;
+            invoice.UpdatedAt = DateTime.UtcNow;
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!InvoiceExists(id))
-                {
-                    return NotFound(new { Message = "Fatura bulunamadı." });
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
-        // DELETE: api/Invoice/{id} 
+        // DELETE: api/Invoice/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteInvoice(int id)
         {
@@ -161,7 +178,7 @@ namespace Finance.Controllers
             return NoContent();
         }
 
-        // GET: api/Invoice 
+        // GET: api/Invoice
         [HttpGet]
         public async Task<ActionResult> GetInvoices(string series = null, int pageNumber = 1, int pageSize = 10)
         {
@@ -170,30 +187,24 @@ namespace Finance.Controllers
                 return BadRequest(new { Message = "Sayfa numarası ve boyutu sıfırdan büyük olmalıdır." });
             }
 
-            var query = _context.Invoices.AsQueryable();
+            var query = _context.Invoices
+                                .Include(i => i.Company)
+                                .Include(i => i.Customer)
+                                .AsQueryable();
 
-            
             if (!string.IsNullOrEmpty(series))
             {
                 query = query.Where(i => i.Series.Contains(series));
             }
 
-            
             var totalRecords = await query.CountAsync();
 
-            
             var invoices = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
 
             return Ok(new { TotalRecords = totalRecords, Data = invoices });
-        }
-
-        
-        private bool InvoiceExists(int id)
-        {
-            return _context.Invoices.Any(e => e.ID == id);
         }
     }
 }
