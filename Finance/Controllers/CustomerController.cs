@@ -1,12 +1,8 @@
-﻿using Finance.Data;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Finance.Models;
+using Finance.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Logging; // Logger ekleniyor
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Finance.Models;
+using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
 namespace Finance.Controllers
 {
@@ -15,32 +11,28 @@ namespace Finance.Controllers
     [ApiController]
     public class CustomerController : ControllerBase
     {
-        private readonly FinanceContext _context;
+        private readonly IDataAccessService _dataAccessService;
         private readonly ILogger<CustomerController> _logger;
 
-        public CustomerController(FinanceContext context, ILogger<CustomerController> logger)
+        public CustomerController(IDataAccessService dataAccessService, ILogger<CustomerController> logger)
         {
-            _context = context;
+            _dataAccessService = dataAccessService;
             _logger = logger;
         }
 
-        // GET: api/Customer (Şirket bazlı müşteri listeleme)
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Customer>>> GetCustomers(int? companyId)
         {
-            IQueryable<Customer> query = _context.Customers.Include(c => c.Company);
+            var customers = await _dataAccessService.GetAllAsync<Customer>();
 
             if (companyId.HasValue)
             {
-                query = query.Where(c => c.CompanyID == companyId);
-                _logger.LogInformation("Şirket ID'sine göre müşteri listesi getiriliyor. CompanyID: {companyId}", companyId);
+                customers = customers.Where(c => c.CompanyID == companyId.Value).ToList();
             }
-
-            var customers = await query.ToListAsync();
 
             if (!customers.Any())
             {
-                _logger.LogInformation("Listelenecek müşteri kaydı bulunamadı.");
+                _logger.LogInformation("Müşteri kaydı bulunamadı.");
                 return NotFound(new { Message = "Müşteri kaydı bulunamadı." });
             }
 
@@ -48,23 +40,10 @@ namespace Finance.Controllers
             return Ok(customers);
         }
 
-        // POST: api/Customer (Yeni müşteri ekleme)
         [HttpPost]
         public async Task<ActionResult<Customer>> PostCustomer(CustomerDTO customerDTO)
         {
-            _logger.LogInformation("Gelen müşteri verileri: {@CustomerDTO}", customerDTO);
-
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            if (customerDTO.CompanyID == 0)
-            {
-                return BadRequest(new { Message = "Geçerli bir Şirket ID'si giriniz." });
-            }
-
-            var company = await _context.Companies.FindAsync(customerDTO.CompanyID);
+            var company = await _dataAccessService.GetByIdAsync<Company>(customerDTO.CompanyID);
             if (company == null)
             {
                 return BadRequest(new { Message = "Geçerli bir Şirket ID'si giriniz." });
@@ -79,21 +58,19 @@ namespace Finance.Controllers
                 CompanyID = customerDTO.CompanyID
             };
 
-            _context.Customers.Add(customer);
-            await _context.SaveChangesAsync();
+            await _dataAccessService.AddAsync(customer);
 
             _logger.LogInformation("Yeni müşteri eklendi. Müşteri ID: {Id}", customer.ID);
             return CreatedAtAction(nameof(GetCustomerById), new { id = customer.ID }, customer);
         }
 
-        // PUT: api/Customer/5 (Müşteri güncelleme)
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCustomer(int id, CustomerDTO customerDTO)
         {
-            var customer = await _context.Customers.FindAsync(id);
+            var customer = await _dataAccessService.GetByIdAsync<Customer>(id);
             if (customer == null)
             {
-                return NotFound(new { Message = "Müşteri kaydı bulunamadı.", Status = 404 });
+                return NotFound(new { Message = "Müşteri kaydı bulunamadı." });
             }
 
             customer.Name = customerDTO.Name;
@@ -102,48 +79,36 @@ namespace Finance.Controllers
             customer.Email = customerDTO.Email;
             customer.CompanyID = customerDTO.CompanyID;
 
-            _context.Entry(customer).State = EntityState.Modified;
+            await _dataAccessService.UpdateAsync(customer);
 
-            try
-            {
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Müşteri güncellendi. ID: {Id}", customer.ID);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                return NotFound(new { Message = "Müşteri kaydı bulunamadı.", Status = 404 });
-            }
-
+            _logger.LogInformation("Müşteri güncellendi. ID: {Id}", id);
             return NoContent();
         }
 
-        // GET: api/Customer/5 (Belirli müşteri bilgisi)
         [HttpGet("{id}")]
         public async Task<ActionResult<Customer>> GetCustomerById(int id)
         {
-            var customer = await _context.Customers.Include(c => c.Company).FirstOrDefaultAsync(c => c.ID == id);
-
+            var customer = await _dataAccessService.GetByIdAsync<Customer>(id);
             if (customer == null)
             {
-                return NotFound(new { Message = "Müşteri kaydı bulunamadı.", Status = 404 });
+                return NotFound(new { Message = "Müşteri kaydı bulunamadı." });
             }
 
             return Ok(customer);
         }
 
-        // DELETE: api/Customer/5 (Müşteri silme)
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCustomer(int id)
         {
-            var customer = await _context.Customers.FindAsync(id);
+            var customer = await _dataAccessService.GetByIdAsync<Customer>(id);
             if (customer == null)
             {
-                return NotFound(new { Message = "Müşteri kaydı bulunamadı.", Status = 404 });
+                return NotFound(new { Message = "Müşteri kaydı bulunamadı." });
             }
 
-            _context.Customers.Remove(customer);
-            await _context.SaveChangesAsync();
+            await _dataAccessService.DeleteAsync(customer);
 
+            _logger.LogInformation("Müşteri silindi. ID: {Id}", id);
             return NoContent();
         }
     }

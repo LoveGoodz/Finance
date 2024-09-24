@@ -1,7 +1,6 @@
-﻿using Finance.Data;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Finance.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
 namespace Finance.Controllers
@@ -11,19 +10,18 @@ namespace Finance.Controllers
     [ApiController]
     public class BalanceController : ControllerBase
     {
-        private readonly FinanceContext _context;
+        private readonly IDataAccessService _dataAccessService;
 
-        public BalanceController(FinanceContext context)
+        public BalanceController(IDataAccessService dataAccessService)
         {
-            _context = context;
+            _dataAccessService = dataAccessService;
         }
 
-        // GET: api/Balance/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<Balance>> GetBalanceById(int id)
         {
             Log.Information("Balance kaydı isteniyor. ID: {Id}", id);
-            var balance = await _context.Balances.FindAsync(id);
+            var balance = await _dataAccessService.GetByIdAsync<Balance>(id);
 
             if (balance == null)
             {
@@ -34,71 +32,49 @@ namespace Finance.Controllers
             return Ok(balance);
         }
 
-        // PUT: api/Balance/5 
         [HttpPut("{id}")]
         public async Task<IActionResult> PutBalance(int id, Balance balance)
         {
             if (id != balance.ID)
             {
                 Log.Warning("ID parametresi ile Balance.ID eşleşmiyor. ID: {Id}", id);
-                return BadRequest(new { Message = "ID parametresi ve Balance.ID eşleşmiyor.", Status = 400 });
+                return BadRequest(new { Message = "ID parametresi ile Balance.ID eşleşmiyor.", Status = 400 });
             }
 
-            _context.Entry(balance).State = EntityState.Modified;
-
-            try
+            var existingBalance = await _dataAccessService.GetByIdAsync<Balance>(id);
+            if (existingBalance == null)
             {
-                await _context.SaveChangesAsync();
-                Log.Information("Balance kaydı güncellendi. ID: {Id}", id);
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                if (!BalanceExists(id))
-                {
-                    Log.Error("Balance kaydı bulunamadı. ID: {Id}", id);
-                    return NotFound(new { Message = "Balance kaydı bulunamadı.", Status = 404 });
-                }
-                else
-                {
-                    Log.Error(ex, "Balance güncelleme sırasında bir hata oluştu. ID: {Id}", id);
-                    throw;
-                }
+                return NotFound(new { Message = "Balance kaydı bulunamadı.", Status = 404 });
             }
 
+            await _dataAccessService.UpdateAsync(balance);
+            Log.Information("Balance kaydı güncellendi. ID: {Id}", id);
             return NoContent();
         }
 
-        // POST: api/Balance 
         [HttpPost]
         public async Task<ActionResult<Balance>> PostBalance(Balance balance)
         {
-            _context.Balances.Add(balance);
-            await _context.SaveChangesAsync();
-
+            await _dataAccessService.AddAsync(balance);
             Log.Information("Yeni Balance kaydı eklendi. ID: {Id}", balance.ID);
             return CreatedAtAction(nameof(GetBalanceById), new { id = balance.ID }, balance);
         }
 
-        // DELETE: api/Balance/5 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBalance(int id)
         {
-            Log.Information("Balance kaydı siliniyor. ID: {Id}", id);
-            var balance = await _context.Balances.FindAsync(id);
+            var balance = await _dataAccessService.GetByIdAsync<Balance>(id);
             if (balance == null)
             {
-                Log.Warning("Balance kaydı silinemedi. Kayıt bulunamadı. ID: {Id}", id);
+                Log.Warning("Balance kaydı bulunamadı. ID: {Id}", id);
                 return NotFound(new { Message = "Balance kaydı bulunamadı.", Status = 404 });
             }
 
-            _context.Balances.Remove(balance);
-            await _context.SaveChangesAsync();
-
+            await _dataAccessService.DeleteAsync(balance);
             Log.Information("Balance kaydı silindi. ID: {Id}", id);
             return NoContent();
         }
 
-        // GET: api/Balance 
         [HttpGet]
         public async Task<ActionResult> GetBalances(int? companyId = null, int pageNumber = 1, int pageSize = 10)
         {
@@ -108,33 +84,11 @@ namespace Finance.Controllers
                 return BadRequest(new { Message = "PageNumber ve PageSize sıfırdan büyük olmalıdır.", Status = 400 });
             }
 
-            Log.Information("Balance kayıtları sayfalama ve filtreleme ile getiriliyor. CompanyID: {CompanyID}", companyId);
-
-            var query = _context.Balances.AsQueryable();
-
-            
-            if (companyId.HasValue)
-            {
-                query = query.Where(b => b.CompanyID == companyId);
-            }
-
-            
-            var totalRecords = await query.CountAsync();
-
-            // Sayfalama işlemi
-            var balances = await query
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+            var balances = await _dataAccessService.GetPagedAsync<Balance>(pageNumber, pageSize, b => !companyId.HasValue || b.CompanyID == companyId);
+            var totalRecords = await _dataAccessService.CountAsync<Balance>(b => !companyId.HasValue || b.CompanyID == companyId);
 
             Log.Information("{Count} Balance kaydı getirildi. PageNumber: {PageNumber}, PageSize: {PageSize}", balances.Count, pageNumber, pageSize);
             return Ok(new { TotalRecords = totalRecords, Data = balances });
-        }
-
-        
-        private bool BalanceExists(int id)
-        {
-            return _context.Balances.Any(e => e.ID == id);
         }
     }
 }

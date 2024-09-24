@@ -1,54 +1,35 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+﻿using Finance.Services;
+using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
 namespace Finance.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController] 
+    [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly IConfiguration _configuration;
+        private readonly IAuthService _authService;
 
-        public AuthController(IConfiguration configuration)
+        public AuthController(IAuthService authService)
         {
-            _configuration = configuration;
+            _authService = authService;
         }
 
         [HttpPost("login")]
-        public IActionResult Login([FromBody] UserLogin request)
+        public async Task<IActionResult> Login([FromBody] UserLogin request)
         {
-            if (request.Username == "admin" && request.Password == "123456")
+            // Servis ile kullanıcı doğrulama işlemi
+            var user = await _authService.AuthenticateAsync(request.Username, request.Password);
+
+            if (user != null)
             {
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
-
-                var claims = new[] {
-                    new Claim(JwtRegisteredClaimNames.Sub, request.Username),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                    new Claim(ClaimTypes.Role, "Admin")
-                };
-
-                var tokenDescriptor = new SecurityTokenDescriptor
-                {
-                    Subject = new ClaimsIdentity(claims),
-                    Expires = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:DurationInMinutes"])),
-                    SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
-                    Issuer = _configuration["Jwt:Issuer"],
-                    Audience = _configuration["Jwt:Audience"]
-                };
-
-                var token = tokenHandler.CreateToken(tokenDescriptor);
-                var tokenString = tokenHandler.WriteToken(token);
-
-                Log.Information("Successful login for user: {Username}", request.Username); // Loglama
-                return Ok(new { Token = tokenString });
+                // Token oluşturma işlemi
+                var token = _authService.GenerateToken(user);
+                Log.Information("Başarılı giriş: {Username}", request.Username);
+                return Ok(new { Token = token });
             }
 
-            Log.Warning("Failed login attempt for user: {Username}", request.Username); // Hatalı giriş loglama
+            Log.Warning("Başarısız giriş denemesi: {Username}", request.Username);
             return Unauthorized("Geçersiz kullanıcı adı veya şifre.");
         }
 
