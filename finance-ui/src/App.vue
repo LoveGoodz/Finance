@@ -1,19 +1,21 @@
 <template>
-  <nav>
-    <router-link to="/invoice">Fatura Listesi</router-link>
-    <router-link to="/invoice/create">Fatura Oluştur</router-link>
-    <router-link to="/customer">Müşteri Listesi</router-link>
-    <router-link to="/customer/create">Müşteri Ekle</router-link>
-    <router-link to="/company">Şirket Listesi</router-link>
-    <router-link to="/company/create">Şirket Ekle</router-link>
-    <router-link to="/login">Çıkış Yap</router-link>
-  </nav>
-  <router-view />
+  <div id="app">
+    <nav>
+      <router-link to="/invoice">Fatura Listesi</router-link>
+      <router-link to="/invoice/create">Fatura Oluştur</router-link>
+      <router-link to="/customer">Müşteri Listesi</router-link>
+      <router-link to="/customer/create">Müşteri Ekle</router-link>
+      <router-link to="/company">Şirket Listesi</router-link>
+      <router-link to="/company/create">Şirket Ekle</router-link>
+      <router-link to="/login">Çıkış Yap</router-link>
+    </nav>
+    <router-view />
+  </div>
 </template>
 
-<style>
+<style scoped>
 body {
-  background-color: #87ceeb;
+  background-color: #f0f8ff;
   margin: 0;
   padding: 0;
   font-family: "Roboto", sans-serif;
@@ -31,14 +33,18 @@ h1,
 h2 {
   font-family: "Montserrat", sans-serif;
   font-size: 2.5rem;
-  color: #ffffff;
+  color: #333;
 }
 
 nav {
-  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 15px;
   background-color: #ffffff;
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
 }
 
 nav a {
@@ -47,16 +53,20 @@ nav a {
   font-weight: bold;
   color: #2c3e50;
   text-decoration: none;
-  margin: 0 15px;
-  transition: color 0.3s ease;
+  margin: 0 20px;
+  padding: 8px 16px;
+  border-radius: 5px;
+  transition: all 0.3s ease;
 }
 
 nav a.router-link-exact-active {
   color: #ff4500;
+  background-color: #f0f8ff;
 }
 
 nav a:hover {
-  color: #42b983;
+  background-color: #42b983;
+  color: white;
 }
 
 button {

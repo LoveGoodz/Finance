@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Finance.Models;
 
 namespace Finance.Data
 {
@@ -18,14 +19,15 @@ namespace Finance.Data
         public DbSet<StockTrans> StockTrans { get; set; }
         public DbSet<ActTrans> ActTrans { get; set; }
         public DbSet<Balance> Balances { get; set; }
+        public DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Company>().ToTable("Company");
             modelBuilder.Entity<Customer>().ToTable("Customer")
-                .HasOne(c => c.Company) 
+                .HasOne(c => c.Company)
                 .WithMany(c => c.Customers)
-                .HasForeignKey(c => c.CompanyID); // Foreign Key
+                .HasForeignKey(c => c.CompanyID); 
 
             modelBuilder.Entity<Company>()
                 .ToTable("Company")
@@ -38,7 +40,15 @@ namespace Finance.Data
             modelBuilder.Entity<Balance>().ToTable("Balance");
             modelBuilder.Entity<StockTrans>().ToTable("StockTran");
             modelBuilder.Entity<ActTrans>().ToTable("ActTran");
+
+            // Varsayılan kullanıcı seed işlemi
+            modelBuilder.Entity<User>().HasData(new User
+            {
+                ID = 1,
+                Username = "admin",
+                Password = "123456", 
+                Role = RoleType.Admin
+            });
         }
     }
 }
-

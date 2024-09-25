@@ -3,6 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using System.Text;
 using Finance.Data;
+using Finance.Services;  // Servis dosyalarýný ekliyoruz
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -20,8 +21,8 @@ builder.Host.UseSerilog();
 // Redis baðlantýsý
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect("localhost:6379"));
 
-// Veritabaný baðlantýsý
-var connectionString = "Server=localhost;Database=Finance;Trusted_Connection=True;TrustServerCertificate=True;";
+// Veritabaný baðlantýsý - appsettings.json'dan alýnýyor
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<FinanceContext>(options =>
     options.UseSqlServer(connectionString));
 
@@ -47,7 +48,7 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"])),
-        ClockSkew = TimeSpan.Zero // Token süresi dolduðunda tolerans olmadan hemen expire eder.
+        ClockSkew = TimeSpan.Zero
     };
 });
 
@@ -87,6 +88,15 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Servisleri Dependency Injection ile ekliyoruz
+builder.Services.AddScoped<IDataAccessService, DataAccessService>(); 
+builder.Services.AddScoped<IStockTransService, StockTransService>();
+builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IInvoiceDetailsService, InvoiceDetailsService>();
+builder.Services.AddScoped<IActTransService, ActTransService>();
+builder.Services.AddScoped<IBalanceService, BalanceService>();
 
 builder.Services.AddControllers();
 

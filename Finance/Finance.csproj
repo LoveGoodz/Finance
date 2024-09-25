@@ -26,7 +26,6 @@
 
   <ItemGroup>
     <Folder Include="Extra\" />
-    <Folder Include="Services\" />
     <Folder Include="Repositories\" />
   </ItemGroup>
 

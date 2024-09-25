@@ -1,9 +1,7 @@
-﻿using Finance.Data;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Finance.Models;
+using Finance.Services;
 using Microsoft.AspNetCore.Authorization;
-using System.Threading.Tasks;
-using Finance.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Finance.Controllers
 {
@@ -12,22 +10,19 @@ namespace Finance.Controllers
     [ApiController]
     public class InvoiceDetailsController : ControllerBase
     {
-        private readonly FinanceContext _context;
+        private readonly IDataAccessService _dataAccessService;
+        private readonly IInvoiceDetailsService _invoiceDetailsService;
 
-        public InvoiceDetailsController(FinanceContext context)
+        public InvoiceDetailsController(IDataAccessService dataAccessService, IInvoiceDetailsService invoiceDetailsService)
         {
-            _context = context;
+            _dataAccessService = dataAccessService;
+            _invoiceDetailsService = invoiceDetailsService;
         }
 
-        // GET: api/InvoiceDetails/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<InvoiceDetails>> GetInvoiceDetailsById(int id)
         {
-            var invoiceDetails = await _context.InvoiceDetails
-                                               .Include(d => d.Invoice)
-                                               .Include(d => d.Stock)
-                                               .FirstOrDefaultAsync(d => d.ID == id);
-
+            var invoiceDetails = await _dataAccessService.GetByIdAsync<InvoiceDetails>(id);
             if (invoiceDetails == null)
             {
                 return NotFound(new { Message = "Fatura detayı bulunamadı." });
@@ -36,7 +31,6 @@ namespace Finance.Controllers
             return Ok(invoiceDetails);
         }
 
-        // POST: api/InvoiceDetails
         [HttpPost]
         public async Task<ActionResult<InvoiceDetails>> PostInvoiceDetails(InvoiceDetailsDTO detailsDto)
         {
@@ -45,56 +39,42 @@ namespace Finance.Controllers
                 return BadRequest(new { Message = "Geçersiz model verisi.", ModelState });
             }
 
-            var invoiceDetails = new InvoiceDetails
-            {
-                InvoiceID = detailsDto.InvoiceID,
-                StockID = detailsDto.StockID,
-                Quantity = detailsDto.Quantity,
-                UnitPrice = detailsDto.UnitPrice,
-                TotalPrice = detailsDto.Quantity * detailsDto.UnitPrice, // Toplam fiyat hesaplanır
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.InvoiceDetails.Add(invoiceDetails);
-            await _context.SaveChangesAsync();
-
+            var invoiceDetails = await _invoiceDetailsService.CreateInvoiceDetailsAsync(detailsDto);
             return CreatedAtAction(nameof(GetInvoiceDetailsById), new { id = invoiceDetails.ID }, invoiceDetails);
         }
 
-        // PUT: api/InvoiceDetails/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> PutInvoiceDetails(int id, InvoiceDetailsDTO detailsDto)
         {
-            var invoiceDetails = await _context.InvoiceDetails.FindAsync(id);
-
+            var invoiceDetails = await _dataAccessService.GetByIdAsync<InvoiceDetails>(id);
             if (invoiceDetails == null)
             {
                 return NotFound(new { Message = "Fatura detayı bulunamadı." });
             }
 
-            invoiceDetails.StockID = detailsDto.StockID;
-            invoiceDetails.Quantity = detailsDto.Quantity;
-            invoiceDetails.UnitPrice = detailsDto.UnitPrice;
-            invoiceDetails.TotalPrice = detailsDto.Quantity * detailsDto.UnitPrice;
-            invoiceDetails.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
+            var updated = await _invoiceDetailsService.UpdateInvoiceDetailsAsync(id, detailsDto);
+            if (!updated)
+            {
+                return BadRequest(new { Message = "Fatura detayı güncellenemedi." });
+            }
 
             return NoContent();
         }
 
-        // DELETE: api/InvoiceDetails/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteInvoiceDetails(int id)
         {
-            var invoiceDetails = await _context.InvoiceDetails.FindAsync(id);
+            var invoiceDetails = await _dataAccessService.GetByIdAsync<InvoiceDetails>(id);
             if (invoiceDetails == null)
             {
                 return NotFound(new { Message = "Fatura detayı bulunamadı." });
             }
 
-            _context.InvoiceDetails.Remove(invoiceDetails);
-            await _context.SaveChangesAsync();
+            var deleted = await _invoiceDetailsService.DeleteInvoiceDetailsAsync(id);
+            if (!deleted)
+            {
+                return BadRequest(new { Message = "Fatura detayı silinemedi." });
+            }
 
             return NoContent();
         }
