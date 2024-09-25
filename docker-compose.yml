@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    image: mcr.microsoft.com/dotnet/aspnet:6.0
+    container_name: finance_backend
+    ports:
+      - "7093:80" 
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__DefaultConnection: "Server=mssql;Database=Finance;User Id=admin;Password=123456;"
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+    command: ["dotnet", "Finance.Api.dll"]
+    depends_on:
+      - mssql
+      - redis
+    networks:
+      - finance-network
+
+  # Frontend (Vue.js)
+  frontend:
+    image: node:16-alpine
+    container_name: finance_frontend
+    ports:
+      - "8082:8080" 
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    command: ["npm", "run", "serve"]
+    networks:
+      - finance-network
+
+  # Redis
+  redis:
+    image: redis:alpine
+    container_name: finance_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - finance-network
+
+  # SQL Server Database
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: finance_mssql
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "123456"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    networks:
+      - finance-network
+
+networks:
+  finance-network:
+    driver: bridge
+
+volumes:
+  mssql-data:

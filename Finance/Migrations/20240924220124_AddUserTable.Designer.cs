@@ -4,6 +4,7 @@ using Finance.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Finance.Migrations
 {
     [DbContext(typeof(FinanceContext))]
-    partial class FinanceContextModelSnapshot : ModelSnapshot
+    [Migration("20240924220124_AddUserTable")]
+    partial class AddUserTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -399,7 +402,7 @@ namespace Finance.Migrations
                     b.HasOne("Company", "Company")
                         .WithMany("Customers")
                         .HasForeignKey("CompanyID")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Company");
@@ -408,15 +411,15 @@ namespace Finance.Migrations
             modelBuilder.Entity("Invoice", b =>
                 {
                     b.HasOne("Company", "Company")
-                        .WithMany("Invoices")
+                        .WithMany()
                         .HasForeignKey("CompanyID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Customer", "Customer")
-                        .WithMany("Invoices")
+                        .WithMany()
                         .HasForeignKey("CustomerID")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Company");
@@ -476,13 +479,6 @@ namespace Finance.Migrations
             modelBuilder.Entity("Company", b =>
                 {
                     b.Navigation("Customers");
-
-                    b.Navigation("Invoices");
-                });
-
-            modelBuilder.Entity("Customer", b =>
-                {
-                    b.Navigation("Invoices");
                 });
 
             modelBuilder.Entity("Invoice", b =>

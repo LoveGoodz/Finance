@@ -1,7 +1,6 @@
 <template>
   <div class="invoice-list-container">
     <h1>Fatura Listesi</h1>
-
     <table>
       <thead>
         <tr>
@@ -17,18 +16,7 @@
           <td>{{ invoice.id }}</td>
           <td>{{ invoice.customer.name }}</td>
           <td>{{ invoice.totalAmount }}</td>
-          <td>
-            <span
-              :class="{
-                'status-approved': invoice.status === 'Onaylandı',
-                'status-draft': invoice.status === 'Taslak',
-                'status-canceled':
-                  invoice.status !== 'Onaylandı' && invoice.status !== 'Taslak',
-              }"
-            >
-              {{ invoice.status }}
-            </span>
-          </td>
+          <td>{{ invoice.status }}</td>
           <td>
             <button @click="viewInvoice(invoice.id)" class="btn btn-info">
               Detay
@@ -37,36 +25,25 @@
         </tr>
       </tbody>
     </table>
-
     <p v-if="invoices.length === 0">Listelenecek fatura bulunamadı.</p>
   </div>
 </template>
 
 <script>
-import axios from "axios";
-import { ref, onMounted } from "vue";
+import { useStore } from "vuex";
+import { computed, onMounted } from "vue";
 
 export default {
   setup() {
-    const invoices = ref([]);
+    const store = useStore();
+    const invoices = computed(() => store.getters.getInvoices);
 
-    // Fatura listesini yükleme
-    onMounted(async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("https://localhost:7093/api/Invoice", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      invoices.value = response.data;
+    onMounted(() => {
+      store.dispatch("fetchInvoices");
     });
-
-    // Fatura detayını görüntüleme
-    const viewInvoice = (id) => {
-      window.location.href = `/invoice/${id}`;
-    };
 
     return {
       invoices,
-      viewInvoice,
     };
   },
 };
@@ -93,7 +70,7 @@ th {
 }
 
 td {
-  color: #ff4500; /* Koyu turuncu renk */
+  color: #ff4500;
 }
 
 h1 {

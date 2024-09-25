@@ -13,6 +13,7 @@ namespace Finance.Services
             _context = context;
         }
 
+        // Şirket ID'ye göre müşteri listesini getirir
         public async Task<IEnumerable<Customer>> GetCustomersAsync(int? companyId)
         {
             IQueryable<Customer> query = _context.Customers.Include(c => c.Company);
@@ -25,6 +26,7 @@ namespace Finance.Services
             return await query.ToListAsync();
         }
 
+        // ID'ye göre tekil müşteri bilgisi getirir
         public async Task<Customer> GetCustomerByIdAsync(int id)
         {
             return await _context.Customers
@@ -32,6 +34,7 @@ namespace Finance.Services
                 .FirstOrDefaultAsync(c => c.ID == id);
         }
 
+        // Yeni müşteri ekler
         public async Task<Customer> AddCustomerAsync(CustomerDTO customerDto)
         {
             var company = await _context.Companies.FindAsync(customerDto.CompanyID);
@@ -55,6 +58,7 @@ namespace Finance.Services
             return customer;
         }
 
+        // Müşteri bilgilerini günceller
         public async Task<bool> UpdateCustomerAsync(int id, CustomerDTO customerDto)
         {
             var customer = await _context.Customers.FindAsync(id);
@@ -75,6 +79,7 @@ namespace Finance.Services
             return true;
         }
 
+        // Müşteri siler
         public async Task<bool> DeleteCustomerAsync(int id)
         {
             var customer = await _context.Customers.FindAsync(id);

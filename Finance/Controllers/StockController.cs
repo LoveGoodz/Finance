@@ -3,6 +3,8 @@ using Finance.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Finance.Controllers
 {
@@ -12,72 +14,124 @@ namespace Finance.Controllers
     public class StockController : ControllerBase
     {
         private readonly IStockService _stockService;
-        private readonly IDataAccessService _dataAccessService;
         private readonly ILogger<StockController> _logger;
 
-        public StockController(IStockService stockService, IDataAccessService dataAccessService, ILogger<StockController> logger)
+        public StockController(IStockService stockService, ILogger<StockController> logger)
         {
             _stockService = stockService;
-            _dataAccessService = dataAccessService;
             _logger = logger;
         }
 
+        // Şirket ID'ye göre stokları getirme
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Stock>>> GetStocks([FromQuery] int? companyId)
+        {
+            try
+            {
+                var stocks = await _stockService.GetStocksAsync(companyId);
+                if (stocks == null || !stocks.Any())
+                {
+                    _logger.LogInformation("Stok kaydı bulunamadı.");
+                    return NotFound(new { Message = "Stok kaydı bulunamadı." });
+                }
+
+                _logger.LogInformation("Stoklar başarıyla getirildi.");
+                return Ok(stocks);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Stok verileri getirilemedi: {Error}", ex.Message);
+                return StatusCode(500, new { Message = "Stok verileri alınamadı." });
+            }
+        }
+
+        // Tekil stok bilgisi getirme
         [HttpGet("{id}")]
         public async Task<ActionResult<Stock>> GetStockById(int id)
         {
-            _logger.LogInformation($"Stok ID {id} ile isteniyor.");
-            var stock = await _dataAccessService.GetByIdAsync<Stock>(id);
-
-            if (stock == null)
+            try
             {
-                _logger.LogWarning($"Stok ID {id} bulunamadı.");
-                return NotFound(new { Message = "Stok kaydı bulunamadı.", Status = 404 });
-            }
+                var stock = await _stockService.GetStockByIdAsync(id);
+                if (stock == null)
+                {
+                    _logger.LogInformation("Stok kaydı bulunamadı. ID: {Id}", id);
+                    return NotFound(new { Message = "Stok kaydı bulunamadı." });
+                }
 
-            return Ok(new { Message = "Stok başarıyla getirildi.", Data = stock });
+                return Ok(stock);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Stok getirilemedi: {Error}", ex.Message);
+                return StatusCode(500, new { Message = "Stok alınamadı." });
+            }
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutStock(int id, Stock stock)
-        {
-            var stockExists = await _dataAccessService.GetByIdAsync<Stock>(id);
-            if (stockExists == null)
-            {
-                _logger.LogWarning($"Stok ID {id} güncellenemedi, çünkü kayıt bulunamadı.");
-                return NotFound(new { Message = "Stok kaydı bulunamadı.", Status = 404 });
-            }
-
-            await _dataAccessService.UpdateAsync(stock);  
-            return NoContent();
-        }
-
+        // Yeni stok ekleme
         [HttpPost]
-        public async Task<ActionResult<Stock>> PostStock(Stock stock)
+        public async Task<ActionResult<Stock>> PostStock(StockDTO stockDto)
         {
-            _logger.LogInformation("Yeni stok ekleniyor.");
-            await _dataAccessService.AddAsync(stock);
-            return CreatedAtAction(nameof(GetStockById), new { id = stock.ID }, new { Message = "Stok başarıyla eklendi.", Data = stock });
+            try
+            {
+                var stock = await _stockService.AddStockAsync(stockDto);
+                if (stock == null)
+                {
+                    return BadRequest(new { Message = "Geçerli bir Şirket ID'si giriniz." });
+                }
+
+                _logger.LogInformation("Yeni stok eklendi. Stok ID: {Id}", stock.ID);
+                return CreatedAtAction(nameof(GetStockById), new { id = stock.ID }, stock);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Stok eklenemedi: {Error}", ex.Message);
+                return StatusCode(500, new { Message = "Stok eklenemedi." });
+            }
         }
 
+        // Stok bilgilerini güncelleme
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutStock(int id, StockDTO stockDto)
+        {
+            try
+            {
+                var success = await _stockService.UpdateStockAsync(id, stockDto);
+                if (!success)
+                {
+                    return NotFound(new { Message = "Stok kaydı bulunamadı." });
+                }
+
+                _logger.LogInformation("Stok güncellendi. ID: {Id}", id);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Stok güncellenemedi: {Error}", ex.Message);
+                return StatusCode(500, new { Message = "Stok güncellenemedi." });
+            }
+        }
+
+        // Stok silme
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteStock(int id)
         {
-            var stock = await _dataAccessService.GetByIdAsync<Stock>(id);
-            if (stock == null)
+            try
             {
-                _logger.LogWarning($"Stok ID {id} bulunamadı, silinemedi.");
-                return NotFound(new { Message = "Stok kaydı bulunamadı.", Status = 404 });
+                var success = await _stockService.DeleteStockAsync(id);
+                if (!success)
+                {
+                    return NotFound(new { Message = "Stok kaydı bulunamadı." });
+                }
+
+                _logger.LogInformation("Stok silindi. ID: {Id}", id);
+                return NoContent();
             }
-
-            await _dataAccessService.DeleteAsync(stock);  
-            return NoContent();
-        }
-
-        [HttpGet]
-        public async Task<ActionResult> GetStocks(string name = null, int pageNumber = 1, int pageSize = 10)
-        {
-            var (stocks, totalRecords) = await _stockService.GetStocksAsync(name, pageNumber, pageSize);
-            return Ok(new { TotalRecords = totalRecords, Data = stocks });
+            catch (Exception ex)
+            {
+                _logger.LogError("Stok silinemedi: {Error}", ex.Message);
+                return StatusCode(500, new { Message = "Stok silinemedi." });
+            }
         }
     }
 }
+

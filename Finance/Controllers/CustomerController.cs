@@ -11,105 +11,124 @@ namespace Finance.Controllers
     [ApiController]
     public class CustomerController : ControllerBase
     {
-        private readonly IDataAccessService _dataAccessService;
+        private readonly ICustomerService _customerService;
         private readonly ILogger<CustomerController> _logger;
 
-        public CustomerController(IDataAccessService dataAccessService, ILogger<CustomerController> logger)
+        public CustomerController(ICustomerService customerService, ILogger<CustomerController> logger)
         {
-            _dataAccessService = dataAccessService;
+            _customerService = customerService;
             _logger = logger;
         }
 
+        // Şirket ID'ye göre müşterileri filtrelemek için GET endpoint
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Customer>>> GetCustomers(int? companyId)
+        public async Task<ActionResult<IEnumerable<Customer>>> GetCustomers([FromQuery] int? companyId)
         {
-            var customers = await _dataAccessService.GetAllAsync<Customer>();
-
-            if (companyId.HasValue)
+            try
             {
-                customers = customers.Where(c => c.CompanyID == companyId.Value).ToList();
-            }
+                var customers = await _customerService.GetCustomersAsync(companyId);
+                if (customers == null || !customers.Any())
+                {
+                    _logger.LogInformation("Müşteri kaydı bulunamadı.");
+                    return NotFound(new { Message = "Müşteri kaydı bulunamadı." });
+                }
 
-            if (!customers.Any())
+                _logger.LogInformation("Müşteriler başarıyla getirildi.");
+                return Ok(customers);
+            }
+            catch (Exception ex)
             {
-                _logger.LogInformation("Müşteri kaydı bulunamadı.");
-                return NotFound(new { Message = "Müşteri kaydı bulunamadı." });
+                _logger.LogError("Müşteri verileri getirilemedi: {Error}", ex.Message);
+                return StatusCode(500, new { Message = "Müşteri verileri alınamadı." });
             }
-
-            _logger.LogInformation("Tüm müşteriler getirildi.");
-            return Ok(customers);
         }
 
-        [HttpPost]
-        public async Task<ActionResult<Customer>> PostCustomer(CustomerDTO customerDTO)
-        {
-            var company = await _dataAccessService.GetByIdAsync<Company>(customerDTO.CompanyID);
-            if (company == null)
-            {
-                return BadRequest(new { Message = "Geçerli bir Şirket ID'si giriniz." });
-            }
-
-            var customer = new Customer
-            {
-                Name = customerDTO.Name,
-                Address = customerDTO.Address,
-                PhoneNumber = customerDTO.PhoneNumber,
-                Email = customerDTO.Email,
-                CompanyID = customerDTO.CompanyID
-            };
-
-            await _dataAccessService.AddAsync(customer);
-
-            _logger.LogInformation("Yeni müşteri eklendi. Müşteri ID: {Id}", customer.ID);
-            return CreatedAtAction(nameof(GetCustomerById), new { id = customer.ID }, customer);
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutCustomer(int id, CustomerDTO customerDTO)
-        {
-            var customer = await _dataAccessService.GetByIdAsync<Customer>(id);
-            if (customer == null)
-            {
-                return NotFound(new { Message = "Müşteri kaydı bulunamadı." });
-            }
-
-            customer.Name = customerDTO.Name;
-            customer.Address = customerDTO.Address;
-            customer.PhoneNumber = customerDTO.PhoneNumber;
-            customer.Email = customerDTO.Email;
-            customer.CompanyID = customerDTO.CompanyID;
-
-            await _dataAccessService.UpdateAsync(customer);
-
-            _logger.LogInformation("Müşteri güncellendi. ID: {Id}", id);
-            return NoContent();
-        }
-
+        // Tekil müşteri bilgisi getirme
         [HttpGet("{id}")]
         public async Task<ActionResult<Customer>> GetCustomerById(int id)
         {
-            var customer = await _dataAccessService.GetByIdAsync<Customer>(id);
-            if (customer == null)
+            try
             {
-                return NotFound(new { Message = "Müşteri kaydı bulunamadı." });
-            }
+                var customer = await _customerService.GetCustomerByIdAsync(id);
+                if (customer == null)
+                {
+                    _logger.LogInformation("Müşteri kaydı bulunamadı. ID: {Id}", id);
+                    return NotFound(new { Message = "Müşteri kaydı bulunamadı." });
+                }
 
-            return Ok(customer);
+                return Ok(customer);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Müşteri getirilemedi: {Error}", ex.Message);
+                return StatusCode(500, new { Message = "Müşteri alınamadı." });
+            }
         }
 
+        // Yeni müşteri ekleme
+        [HttpPost]
+        public async Task<ActionResult<Customer>> PostCustomer(CustomerDTO customerDTO)
+        {
+            try
+            {
+                var customer = await _customerService.AddCustomerAsync(customerDTO);
+                if (customer == null)
+                {
+                    return BadRequest(new { Message = "Geçerli bir Şirket ID'si giriniz." });
+                }
+
+                _logger.LogInformation("Yeni müşteri eklendi. Müşteri ID: {Id}", customer.ID);
+                return CreatedAtAction(nameof(GetCustomerById), new { id = customer.ID }, customer);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Müşteri eklenemedi: {Error}", ex.Message);
+                return StatusCode(500, new { Message = "Müşteri eklenemedi." });
+            }
+        }
+
+        // Müşteri bilgilerini güncelleme
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutCustomer(int id, CustomerDTO customerDTO)
+        {
+            try
+            {
+                var success = await _customerService.UpdateCustomerAsync(id, customerDTO);
+                if (!success)
+                {
+                    return NotFound(new { Message = "Müşteri kaydı bulunamadı." });
+                }
+
+                _logger.LogInformation("Müşteri güncellendi. ID: {Id}", id);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Müşteri güncellenemedi: {Error}", ex.Message);
+                return StatusCode(500, new { Message = "Müşteri güncellenemedi." });
+            }
+        }
+
+        // Müşteri silme
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCustomer(int id)
         {
-            var customer = await _dataAccessService.GetByIdAsync<Customer>(id);
-            if (customer == null)
+            try
             {
-                return NotFound(new { Message = "Müşteri kaydı bulunamadı." });
+                var success = await _customerService.DeleteCustomerAsync(id);
+                if (!success)
+                {
+                    return NotFound(new { Message = "Müşteri kaydı bulunamadı." });
+                }
+
+                _logger.LogInformation("Müşteri silindi. ID: {Id}", id);
+                return NoContent();
             }
-
-            await _dataAccessService.DeleteAsync(customer);
-
-            _logger.LogInformation("Müşteri silindi. ID: {Id}", id);
-            return NoContent();
+            catch (Exception ex)
+            {
+                _logger.LogError("Müşteri silinemedi: {Error}", ex.Message);
+                return StatusCode(500, new { Message = "Müşteri silinemedi." });
+            }
         }
     }
 }

@@ -22,4 +22,6 @@ public class Company
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
     public ICollection<Customer> Customers { get; set; } = new List<Customer>();
+
+    public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
 }

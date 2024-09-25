@@ -21,7 +21,7 @@ namespace Finance.Services
 
         public async Task<User> AuthenticateAsync(string username, string password)
         {
-            // Veritabanında kullanıcıyı kontrol et
+            // Kullanıcıyı veritabanında kontrol et
             return await _context.Users.FirstOrDefaultAsync(u => u.Username == username && u.Password == password);
         }
 
@@ -33,7 +33,7 @@ namespace Finance.Services
             var claims = new[] {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Username),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(ClaimTypes.Role, user.Role.ToString())  // Kullanıcının rolünü ekle
+                new Claim(ClaimTypes.Role, user.Role.ToString())
             };
 
             var tokenDescriptor = new SecurityTokenDescriptor

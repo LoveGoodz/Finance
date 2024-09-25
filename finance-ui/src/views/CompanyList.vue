@@ -37,35 +37,30 @@
 </template>
 
 <script>
-import axios from "axios";
-import { ref, onMounted } from "vue";
+import { useStore } from "vuex";
+import { computed, onMounted } from "vue";
+import { useRouter } from "vue-router"; // Router'ı ekleyelim
 
 export default {
   setup() {
-    const companies = ref([]);
+    const store = useStore();
+    const router = useRouter(); // Router'ı ekleyelim
+    const companies = computed(() => store.getters.getCompanies);
 
-    onMounted(async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("https://localhost:7093/api/company", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      companies.value = response.data;
+    onMounted(() => {
+      store.dispatch("fetchCompanies");
     });
 
     const viewDetails = (id) => {
-      window.location.href = `/company/${id}`;
+      router.push(`/company/${id}`);
     };
 
     const deleteCompany = async (id) => {
-      const token = localStorage.getItem("token");
-      await axios.delete(`https://localhost:7093/api/company/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      companies.value = companies.value.filter((c) => c.id !== id);
+      await store.dispatch("deleteCompany", id);
     };
 
     const editCompany = (id) => {
-      window.location.href = `/company/edit/${id}`;
+      router.push(`/company/edit/${id}`); // Düzenleme sayfasına yönlendirme
     };
 
     return {
@@ -82,32 +77,26 @@ export default {
 .company-list-container {
   padding: 20px;
 }
-
 h1 {
-  color: #ff69b4; /* Başlık rengi */
+  color: #ff69b4;
 }
-
 table {
   width: 100%;
   border-collapse: collapse;
 }
-
 th,
 td {
   padding: 10px;
   border: 1px solid #ddd;
 }
-
 th {
   background-color: #333;
-  color: white; /* Başlıkların beyaz rengi */
+  color: white;
 }
-
 .company-data {
-  color: #cc5500; /* Koyu turuncu yazı rengi */
+  color: #cc5500;
   font-weight: bold;
 }
-
 .btn {
   padding: 8px 16px;
   margin: 4px;
@@ -115,22 +104,18 @@ th {
   border-radius: 4px;
   cursor: pointer;
 }
-
 .btn-info {
   background-color: #17a2b8;
   color: white;
 }
-
 .btn-danger {
   background-color: #dc3545;
   color: white;
 }
-
 .btn-success {
   background-color: #28a745;
   color: white;
 }
-
 .btn:hover {
   opacity: 0.9;
 }
