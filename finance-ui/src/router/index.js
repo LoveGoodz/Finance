@@ -6,17 +6,29 @@ import InvoiceEdit from "../views/InvoiceEdit.vue";
 import CustomerCreate from "../views/CustomerCreate.vue";
 import CustomerList from "../views/CustomerList.vue";
 import CustomerEdit from "../views/CustomerEdit.vue";
-import CustomerDetails from "../views/CustomerDetails.vue"; // CustomerDetails sayfası import edildi
+import CustomerDetails from "../views/CustomerDetails.vue";
 import LoginPage from "../views/LoginPage.vue";
+import RegisterPage from "../views/RegisterPage.vue";
 import CompanyList from "../views/CompanyList.vue";
 import CompanyCreate from "../views/CompanyCreate.vue";
+import CompanyEdit from "../views/CompanyEdit.vue";
 import CompanyDetails from "../views/CompanyDetails.vue";
+import StockList from "../views/StockList.vue";
+import StockCreate from "../views/StockCreate.vue";
+import StockEdit from "../views/StockEdit.vue";
+import StockDetails from "../views/StockDetails.vue";
+import store from "../store";
 
 const routes = [
   {
     path: "/",
     name: "login-page",
     component: LoginPage,
+  },
+  {
+    path: "/register",
+    name: "register-page",
+    component: RegisterPage,
   },
   {
     path: "/invoice",
@@ -54,7 +66,7 @@ const routes = [
     component: CustomerEdit,
   },
   {
-    path: "/customer/:id", // CustomerDetails sayfası için route tanımlandı
+    path: "/customer/:id",
     name: "customer-details",
     component: CustomerDetails,
   },
@@ -69,9 +81,34 @@ const routes = [
     component: CompanyCreate,
   },
   {
+    path: "/company/edit/:id",
+    name: "company-edit",
+    component: CompanyEdit,
+  },
+  {
     path: "/company/:id",
     name: "company-details",
     component: CompanyDetails,
+  },
+  {
+    path: "/stock",
+    name: "stock-list",
+    component: StockList,
+  },
+  {
+    path: "/stock/create",
+    name: "stock-create",
+    component: StockCreate,
+  },
+  {
+    path: "/stock/edit/:id",
+    name: "stock-edit",
+    component: StockEdit,
+  },
+  {
+    path: "/stock/:id",
+    name: "stock-details",
+    component: StockDetails,
   },
   {
     path: "/login",
@@ -86,13 +123,14 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  const publicPages = ["/", "/login"];
+  const publicPages = ["/", "/login", "/register"];
   const authRequired = !publicPages.includes(to.path);
-  const token = localStorage.getItem("token");
+  const isAuthenticated = store.state.token;
 
-  if (authRequired && !token) {
+  if (authRequired && !isAuthenticated) {
     return next("/login");
   }
+
   next();
 });
 

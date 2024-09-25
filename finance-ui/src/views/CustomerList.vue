@@ -1,8 +1,6 @@
 <template>
   <div class="customer-list-container">
     <h1>Müşteri Listesi</h1>
-
-    <!-- Şirketleri Listeleme Dropdown -->
     <div>
       <label for="companySelect">Şirket Seç:</label>
       <select
@@ -11,7 +9,6 @@
         @change="fetchCustomers"
       >
         <option value="">Tüm Müşteriler</option>
-        <!-- Tüm müşteriler için boş seçenek -->
         <option
           v-for="company in companies"
           :key="company.id"
@@ -22,7 +19,12 @@
       </select>
     </div>
 
-    <!-- Müşteri Tablosu -->
+    <!-- Eğer hata mesajı varsa göster, müşteri listesi yoksa hata gösteriyoruz -->
+    <p v-if="customers.length === 0 && errorMessage" class="error">
+      {{ errorMessage }}
+    </p>
+
+    <!-- Eğer müşteri listesi varsa tabloyu göster -->
     <table v-if="customers.length > 0">
       <thead>
         <tr>
@@ -56,75 +58,40 @@
       </tbody>
     </table>
 
-    <!-- Müşteri yoksa gösterilecek mesaj -->
-    <p v-if="customers.length === 0">{{ noCustomersMessage }}</p>
+    <!-- Eğer müşteri listesi boşsa ve bir hata mesajı yoksa gösterilecek mesaj -->
+    <p v-if="customers.length === 0 && !errorMessage">
+      Listelenecek müşteri bulunamadı.
+    </p>
   </div>
 </template>
 
 <script>
-import axios from "axios";
-import { ref, onMounted } from "vue";
+import { useStore } from "vuex";
+import { ref, computed, onMounted } from "vue";
 
 export default {
   setup() {
-    const customers = ref([]);
-    const companies = ref([]);
-    const selectedCompany = ref(null);
-    const noCustomersMessage = ref("");
+    const store = useStore();
+    const customers = computed(() => store.getters.getCustomers);
+    const companies = computed(() => store.getters.getCompanies);
+    const selectedCompany = ref("");
+    const errorMessage = computed(() => store.getters.getError); // Hata mesajını almak
 
-    // Şirketleri listeleme
-    const fetchCompanies = async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("https://localhost:7093/api/company", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      companies.value = response.data;
-    };
-
-    // Tüm müşterileri veya seçilen şirkete ait müşterileri getirme
-    const fetchCustomers = async () => {
-      const token = localStorage.getItem("token");
-      try {
-        let response;
-        if (selectedCompany.value) {
-          response = await axios.get(
-            `https://localhost:7093/api/customer?companyId=${selectedCompany.value}`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-        } else {
-          response = await axios.get("https://localhost:7093/api/customer", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-        }
-        customers.value = response.data;
-        noCustomersMessage.value = ""; // Hata mesajını sıfırla
-      } catch (error) {
-        if (error.response && error.response.status === 404) {
-          customers.value = [];
-          noCustomersMessage.value = "Listelenecek müşteri bulunamadı."; // Hata mesajı ayarla
-        } else {
-          console.error("Müşteri listesi yüklenirken hata oluştu:", error);
-        }
-      }
-    };
-
-    onMounted(async () => {
-      await fetchCompanies();
-      await fetchCustomers();
+    onMounted(() => {
+      store.dispatch("fetchCompanies");
+      fetchCustomers();
     });
+
+    const fetchCustomers = () => {
+      store.dispatch("fetchCustomers", selectedCompany.value);
+    };
 
     const viewCustomer = (id) => {
       window.location.href = `/customer/${id}`;
     };
 
     const deleteCustomer = async (id) => {
-      const token = localStorage.getItem("token");
-      await axios.delete(`https://localhost:7093/api/customer/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      customers.value = customers.value.filter((c) => c.id !== id);
+      await store.dispatch("deleteCustomer", id);
     };
 
     const editCustomer = (id) => {
@@ -135,11 +102,11 @@ export default {
       customers,
       companies,
       selectedCompany,
+      fetchCustomers,
       viewCustomer,
       deleteCustomer,
       editCustomer,
-      fetchCustomers,
-      noCustomersMessage,
+      errorMessage,
     };
   },
 };
@@ -149,40 +116,37 @@ export default {
 .customer-list-container {
   padding: 20px;
 }
-
 h1 {
   color: #ff69b4;
   font-weight: bold;
   margin-bottom: 1rem;
 }
-
 table {
   width: 100%;
   border-collapse: collapse;
 }
-
 th,
 td {
   padding: 10px;
   border: 1px solid #ddd;
 }
-
 th {
   background-color: #333;
   color: white;
 }
-
 .customer-data {
   color: #cc5500;
   font-weight: bold;
 }
-
 select {
   margin-bottom: 20px;
   padding: 10px;
   font-size: 1rem;
 }
-
+.error {
+  color: red;
+  margin-top: 1rem;
+}
 .btn {
   padding: 8px 16px;
   margin: 4px;
@@ -190,22 +154,18 @@ select {
   border-radius: 4px;
   cursor: pointer;
 }
-
 .btn-info {
   background-color: #17a2b8;
   color: white;
 }
-
 .btn-danger {
   background-color: #dc3545;
   color: white;
 }
-
 .btn-success {
   background-color: #28a745;
   color: white;
 }
-
 .btn:hover {
   opacity: 0.9;
 }

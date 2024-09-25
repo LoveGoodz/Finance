@@ -1,10 +1,15 @@
 <template>
-  <div class="login-container">
-    <h1>Giriş Yap</h1>
-    <form @submit.prevent="login">
+  <div class="register-container">
+    <h1>Kayıt Ol</h1>
+    <form @submit.prevent="register">
       <div class="form-group">
         <label for="username">Kullanıcı Adı:</label>
         <input type="text" id="username" v-model="username" required />
+      </div>
+
+      <div class="form-group">
+        <label for="email">E-posta:</label>
+        <input type="email" id="email" v-model="email" required />
       </div>
 
       <div class="form-group">
@@ -12,61 +17,54 @@
         <input type="password" id="password" v-model="password" required />
       </div>
 
-      <button type="submit" :disabled="loading">
-        <span v-if="loading">Giriş Yapılıyor...</span>
-        <span v-else>Giriş Yap</span>
-      </button>
+      <button type="submit">Kayıt Ol</button>
     </form>
 
     <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-
-    <div class="register-container">
-      <p>Henüz bir hesabınız yok mu?</p>
-      <router-link to="/register" class="register-link">Kayıt Ol</router-link>
-    </div>
   </div>
 </template>
 
 <script>
-import { ref } from "vue";
+import axios from "axios";
 import { useRouter } from "vue-router";
-import store from "../store"; // Vuex store'u ekliyoruz
+import { ref } from "vue";
 
 export default {
   setup() {
     const username = ref("");
+    const email = ref("");
     const password = ref("");
     const errorMessage = ref("");
-    const loading = ref(false);
     const router = useRouter();
 
-    const login = async () => {
-      loading.value = true;
-      const success = await store.dispatch("login", {
-        username: username.value,
-        password: password.value,
-      });
-      loading.value = false;
-      if (success) {
-        router.push("/invoice");
-      } else {
-        errorMessage.value = "Geçersiz kullanıcı adı veya şifre.";
+    const register = async () => {
+      try {
+        await axios.post("https://localhost:7093/api/Auth/register", {
+          username: username.value,
+          email: email.value,
+          password: password.value,
+        });
+
+        router.push("/");
+      } catch (error) {
+        errorMessage.value =
+          "Kayıt başarısız. Lütfen bilgilerinizi kontrol edin.";
       }
     };
 
     return {
       username,
+      email,
       password,
       errorMessage,
-      loading,
-      login,
+      register,
     };
   },
 };
 </script>
 
 <style scoped>
-.login-container {
+.register-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -122,25 +120,5 @@ button {
 
 button:hover {
   background-color: #a25f29;
-}
-
-button:disabled {
-  background-color: #e0e0e0;
-  cursor: not-allowed;
-}
-
-.register-container {
-  margin-top: 1rem;
-  text-align: center;
-}
-
-.register-link {
-  color: #ff4500;
-  text-decoration: none;
-  font-weight: bold;
-}
-
-.register-link:hover {
-  color: #e63900;
 }
 </style>

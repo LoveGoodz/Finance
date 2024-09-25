@@ -3,7 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using System.Text;
 using Finance.Data;
-using Finance.Services;  // Servis dosyalarýný ekliyoruz
+using Finance.Services;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -19,17 +19,20 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Redis baðlantýsý
-builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect("localhost:6379"));
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var configuration = ConfigurationOptions.Parse("localhost:6379", true);
+    configuration.ResolveDns = true;
+    return ConnectionMultiplexer.Connect(configuration);
+});
 
-// Veritabaný baðlantýsý - appsettings.json'dan alýnýyor
+// Veritabaný baðlantýsý
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<FinanceContext>(options =>
     options.UseSqlServer(connectionString));
 
-// JWT ayarlarýný appsettings.json'dan al
+// JWT kimlik doðrulamasý ayarlarý
 var jwtSettings = builder.Configuration.GetSection("Jwt");
-
-// JWT kimlik doðrulamasýný yapýlandýrma
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -61,17 +64,16 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1"
     });
 
-    // JWT Token'ý Swagger UI'ya eklemek için ayar
+    // Swagger için JWT ayarlarý
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = "JWT Bearer token'ýný 'Bearer {token}' formatýnda girin.",
+        Description = "JWT Bearer token'ý 'Bearer {token}' formatýnda girin.",
         Name = "Authorization",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
         Scheme = "Bearer"
     });
 
-    // Tüm endpoint'ler için global olarak JWT doðrulama eklemek
     c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
         {
@@ -88,8 +90,9 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Servisleri Dependency Injection ile ekliyoruz
-builder.Services.AddScoped<IDataAccessService, DataAccessService>(); 
+// Servisleri ekleme
+builder.Services.AddScoped<IDataAccessService, DataAccessService>();
+builder.Services.AddScoped<IAuthService, AuthService>();  
 builder.Services.AddScoped<IStockTransService, StockTransService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
@@ -98,9 +101,12 @@ builder.Services.AddScoped<IInvoiceDetailsService, InvoiceDetailsService>();
 builder.Services.AddScoped<IActTransService, ActTransService>();
 builder.Services.AddScoped<IBalanceService, BalanceService>();
 
+// IStockService ve StockService'i DI sistemine ekliyoruz
+builder.Services.AddScoped<IStockService, StockService>();
+
 builder.Services.AddControllers();
 
-// CORS yapýlandýrmasý 
+// CORS yapýlandýrmasý
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -127,7 +133,7 @@ if (app.Environment.IsDevelopment())
 // HTTPS yönlendirme
 app.UseHttpsRedirection();
 
-// CORS'u devreye al 
+// CORS devreye al
 app.UseCors("AllowAll");
 
 // Kimlik doðrulama ve yetkilendirme

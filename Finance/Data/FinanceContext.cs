@@ -10,7 +10,6 @@ namespace Finance.Data
         {
         }
 
-        // DbSet tanımları
         public DbSet<Company> Companies { get; set; }
         public DbSet<Stock> Stocks { get; set; }
         public DbSet<Customer> Customers { get; set; }
@@ -23,30 +22,49 @@ namespace Finance.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Company tablosu ilişkileri
             modelBuilder.Entity<Company>().ToTable("Company");
+
+            // Customer tablosu ilişkileri
             modelBuilder.Entity<Customer>().ToTable("Customer")
                 .HasOne(c => c.Company)
                 .WithMany(c => c.Customers)
-                .HasForeignKey(c => c.CompanyID); 
+                .HasForeignKey(c => c.CompanyID)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Company>()
-                .ToTable("Company")
-                .HasMany(c => c.Customers)
-                .WithOne(c => c.Company)
-                .HasForeignKey(c => c.CompanyID);
+            // Invoice tablosu ilişkileri ve datetime2 kullanımı
+            modelBuilder.Entity<Invoice>().ToTable("Invoice")
+                .HasOne(i => i.Customer)
+                .WithMany(c => c.Invoices)
+                .HasForeignKey(i => i.CustomerID)
+                .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<Invoice>().Property(i => i.InvoiceDate).HasColumnType("datetime2");
+            modelBuilder.Entity<Invoice>().Property(i => i.CreatedAt).HasColumnType("datetime2");
+            modelBuilder.Entity<Invoice>().Property(i => i.UpdatedAt).HasColumnType("datetime2");
+
+            // Stock tablosu
             modelBuilder.Entity<Stock>().ToTable("Stock");
-            modelBuilder.Entity<Invoice>().ToTable("Invoice");
-            modelBuilder.Entity<Balance>().ToTable("Balance");
-            modelBuilder.Entity<StockTrans>().ToTable("StockTran");
-            modelBuilder.Entity<ActTrans>().ToTable("ActTran");
+
+            // Balance tablosu
+            modelBuilder.Entity<Balance>().ToTable("Balance")
+                .Property(b => b.CreatedAt).HasColumnType("datetime2");
+            modelBuilder.Entity<Balance>().Property(b => b.UpdatedAt).HasColumnType("datetime2");
+
+            // StockTrans tablosu
+            modelBuilder.Entity<StockTrans>().ToTable("StockTran")
+                .Property(st => st.CreatedAt).HasColumnType("datetime2");
+
+            // ActTrans tablosu
+            modelBuilder.Entity<ActTrans>().ToTable("ActTran")
+                .Property(at => at.CreatedAt).HasColumnType("datetime2");
 
             // Varsayılan kullanıcı seed işlemi
             modelBuilder.Entity<User>().HasData(new User
             {
                 ID = 1,
                 Username = "admin",
-                Password = "123456", 
+                Password = "123456",
                 Role = RoleType.Admin
             });
         }

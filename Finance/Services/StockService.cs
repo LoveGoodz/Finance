@@ -1,6 +1,9 @@
 ﻿using Finance.Data;
 using Finance.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Finance.Services
 {
@@ -13,45 +16,73 @@ namespace Finance.Services
             _context = context;
         }
 
-        public async Task<Stock> GetStockByIdAsync(int id)
+        // Şirket ID'ye göre stokları getirir
+        public async Task<IEnumerable<Stock>> GetStocksAsync(int? companyId)
         {
-            return await _context.Stocks.FindAsync(id);
+            IQueryable<Stock> query = _context.Stocks.Include(s => s.Company);
+
+            if (companyId.HasValue)
+            {
+                query = query.Where(s => s.CompanyID == companyId);
+            }
+
+            return await query.ToListAsync();
         }
 
-        public async Task<Stock> CreateStockAsync(Stock stock)
+        // ID'ye göre tekil stok getirir
+        public async Task<Stock> GetStockByIdAsync(int id)
         {
+            return await _context.Stocks
+                .Include(s => s.Company)
+                .FirstOrDefaultAsync(s => s.ID == id);
+        }
+
+        // Yeni stok ekleme
+        public async Task<Stock> AddStockAsync(StockDTO stockDto)
+        {
+            var company = await _context.Companies.FindAsync(stockDto.CompanyID);
+            if (company == null)
+            {
+                return null;
+            }
+
+            var stock = new Stock
+            {
+                Name = stockDto.Name,
+                Quantity = stockDto.Quantity,
+                UnitPrice = (decimal)stockDto.UnitPrice,  // double -> decimal dönüştürüldü
+                CompanyID = stockDto.CompanyID,
+                CreatedAt = stockDto.CreatedAt,
+                UpdatedAt = stockDto.UpdatedAt
+            };
+
             _context.Stocks.Add(stock);
             await _context.SaveChangesAsync();
+
             return stock;
         }
 
-        public async Task<bool> UpdateStockAsync(int id, Stock stock)
+        // Stok bilgilerini güncelleme
+        public async Task<bool> UpdateStockAsync(int id, StockDTO stockDto)
         {
-            if (id != stock.ID)
+            var stock = await _context.Stocks.FindAsync(id);
+            if (stock == null)
             {
                 return false;
             }
 
-            _context.Entry(stock).State = EntityState.Modified;
+            stock.Name = stockDto.Name;
+            stock.Quantity = stockDto.Quantity;
+            stock.UnitPrice = (decimal)stockDto.UnitPrice;  // double -> decimal dönüştürüldü
+            stock.UpdatedAt = stockDto.UpdatedAt;
 
-            try
-            {
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!StockExists(id))
-                {
-                    return false;
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            _context.Entry(stock).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            return true;
         }
 
+        // Stok silme
         public async Task<bool> DeleteStockAsync(int id)
         {
             var stock = await _context.Stocks.FindAsync(id);
@@ -62,27 +93,8 @@ namespace Finance.Services
 
             _context.Stocks.Remove(stock);
             await _context.SaveChangesAsync();
+
             return true;
-        }
-
-        public async Task<(IEnumerable<Stock> Stocks, int TotalRecords)> GetStocksAsync(string name, int pageNumber, int pageSize)
-        {
-            var query = _context.Stocks.AsQueryable();
-
-            if (!string.IsNullOrEmpty(name))
-            {
-                query = query.Where(s => s.Name.Contains(name));
-            }
-
-            var totalRecords = await query.CountAsync();
-            var stocks = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
-
-            return (stocks, totalRecords);
-        }
-
-        private bool StockExists(int id)
-        {
-            return _context.Stocks.Any(e => e.ID == id);
         }
     }
 }

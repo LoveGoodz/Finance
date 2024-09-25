@@ -17,4 +17,6 @@ public class Customer
 
     [JsonIgnore]
     public Company Company { get; set; }
+    public ICollection<Invoice> Invoices { get; set; }
+
 }

@@ -1,13 +1,15 @@
 ﻿using Finance.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Finance.Services
 {
     public interface IStockService
     {
+        Task<IEnumerable<Stock>> GetStocksAsync(int? companyId);
         Task<Stock> GetStockByIdAsync(int id);
-        Task<Stock> CreateStockAsync(Stock stock);
-        Task<bool> UpdateStockAsync(int id, Stock stock);
+        Task<Stock> AddStockAsync(StockDTO stockDto);
+        Task<bool> UpdateStockAsync(int id, StockDTO stockDto);
         Task<bool> DeleteStockAsync(int id);
-        Task<(IEnumerable<Stock> Stocks, int TotalRecords)> GetStocksAsync(string name, int pageNumber, int pageSize);
     }
 }

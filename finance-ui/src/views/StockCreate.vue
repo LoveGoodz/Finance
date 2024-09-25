@@ -20,6 +20,24 @@
         required
       />
 
+      <label for="unitPrice">Birim Fiyat:</label>
+      <input
+        type="number"
+        v-model="stock.unitPrice"
+        id="unitPrice"
+        class="form-input"
+        required
+      />
+
+      <label for="companyId">Şirket ID:</label>
+      <input
+        type="number"
+        v-model="stock.companyID"
+        id="companyId"
+        class="form-input"
+        required
+      />
+
       <button type="submit" class="btn-primary">Kaydet</button>
     </form>
   </div>
@@ -34,6 +52,8 @@ export default {
       stock: {
         name: "",
         quantity: 0,
+        unitPrice: 0, // UnitPrice eklendi
+        companyID: 0, // CompanyID eklendi
       },
     };
   },
