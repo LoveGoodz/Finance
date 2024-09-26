@@ -11,7 +11,7 @@ const store = createStore({
     invoices: [],
     stocks: [],
     filteredStocks: [],
-    totalStockRecords: 0,
+    selectedStock: {},
     token: localStorage.getItem("token") || "",
     error: null,
     loading: false,
@@ -35,11 +35,8 @@ const store = createStore({
     SET_FILTERED_STOCKS(state, stocks) {
       state.filteredStocks = stocks;
     },
-    SET_TOTAL_STOCK_RECORDS(state, total) {
-      state.totalStockRecords = total;
-    },
-    SET_TOKEN(state, token) {
-      state.token = token;
+    SET_SELECTED_STOCK(state, stock) {
+      state.selectedStock = stock;
     },
     SET_ERROR(state, error) {
       state.error = error;
@@ -61,15 +58,12 @@ const store = createStore({
         const token = response.data.Token || response.data.token;
         if (token) {
           localStorage.setItem("token", token);
-          commit("SET_TOKEN", token);
           commit("SET_USER", response.data.user);
-          return true;
         } else {
           throw new Error("Token alınamadı.");
         }
       } catch (error) {
         commit("SET_ERROR", "Giriş hatası: " + error.message);
-        return false;
       } finally {
         commit("SET_LOADING", false);
       }
@@ -122,8 +116,9 @@ const store = createStore({
         commit("SET_LOADING", false);
       }
     },
-    async fetchStocks({ commit }, companyId = null) {
+    async fetchStocks({ commit }, companyId = "") {
       commit("SET_LOADING", true);
+      commit("SET_ERROR", null); // Hata mesajını sıfırla
       try {
         let url = "/api/stock";
         if (companyId) {
@@ -134,14 +129,47 @@ const store = createStore({
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
+
         if (companyId) {
-          commit("SET_FILTERED_STOCKS", response.data.Data || []);
+          commit("SET_FILTERED_STOCKS", response.data || []);
         } else {
-          commit("SET_STOCKS", response.data.Data || []);
+          commit("SET_STOCKS", response.data || []);
+          commit("SET_FILTERED_STOCKS", []);
         }
-        commit("SET_TOTAL_STOCK_RECORDS", response.data.TotalRecords);
       } catch (error) {
-        commit("SET_ERROR", "Stok verileri alınamadı.");
+        if (error.response && error.response.status === 404) {
+          commit("SET_FILTERED_STOCKS", []); // Şirkete ait stok yoksa boş array
+          commit("SET_ERROR", "Listelenecek stok bulunamadı."); // Hata mesajı
+        } else {
+          commit("SET_ERROR", "Stok verileri alınamadı."); // Genel hata mesajı
+        }
+      } finally {
+        commit("SET_LOADING", false);
+      }
+    },
+    async fetchStockById({ commit }, stockId) {
+      commit("SET_LOADING", true);
+      try {
+        const response = await axios.get(`/api/stock/${stockId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+        commit("SET_SELECTED_STOCK", response.data);
+      } catch (error) {
+        commit("SET_ERROR", "Stok bilgisi alınamadı.");
+        throw error;
+      } finally {
+        commit("SET_LOADING", false);
+      }
+    },
+    async updateStock({ commit }, stock) {
+      commit("SET_LOADING", true);
+      try {
+        await axios.put(`/api/stock/${stock.id}`, stock, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+      } catch (error) {
+        commit("SET_ERROR", "Stok güncellenemedi.");
+        throw error;
       } finally {
         commit("SET_LOADING", false);
       }
@@ -169,9 +197,11 @@ const store = createStore({
     getCustomers: (state) => state.customers,
     getInvoices: (state) => state.invoices,
     getStocks: (state) => state.stocks,
-    getFilteredStocks: (state) => state.filteredStocks,
-    getTotalStockRecords: (state) => state.totalStockRecords,
-    getToken: (state) => state.token,
+    getFilteredStocks: (state) =>
+      state.filteredStocks.length > 0 || state.error
+        ? state.filteredStocks
+        : state.stocks,
+    getSelectedStock: (state) => state.selectedStock,
     getError: (state) => state.error,
     isAuthenticated: (state) => !!state.token,
     isLoading: (state) => state.loading,
