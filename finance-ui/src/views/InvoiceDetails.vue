@@ -1,8 +1,8 @@
 <template>
   <div>
     <h1>Fatura Detayları</h1>
-
-    <div v-if="invoice">
+    <!-- `invoice` varsa detayları göster, yoksa yükleme mesajı göster -->
+    <div v-if="invoice && invoice.customer && invoice.company">
       <h2>Müşteri: {{ invoice.customer.name }}</h2>
       <h3>Şirket: {{ invoice.company.name }}</h3>
       <p>
@@ -12,7 +12,7 @@
         </span>
       </p>
       <p>Toplam Tutar: {{ invoice.totalAmount }} TL</p>
-      <p>Fatura Tarihi: {{ invoice.invoiceDate }}</p>
+      <p>Fatura Tarihi: {{ formattedDate(invoice.invoiceDate) }}</p>
 
       <h3>Ürünler</h3>
       <DataTable :value="invoice.invoiceDetails" class="custom-table">
@@ -55,7 +55,7 @@
       </DataTable>
     </div>
 
-    <p v-if="!invoice">Fatura bulunamadı.</p>
+    <p v-else>Fatura bilgisi yükleniyor...</p>
   </div>
 </template>
 
@@ -106,7 +106,18 @@ export default {
       return "cancel-status";
     };
 
-    return { invoice, statusClass };
+    const formattedDate = (dateString) => {
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0"); // Aylar 0'dan başlar
+      const year = date.getFullYear();
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const seconds = String(date.getSeconds()).padStart(2, "0");
+      return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+    };
+
+    return { invoice, statusClass, formattedDate };
   },
 };
 </script>

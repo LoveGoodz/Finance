@@ -52,8 +52,8 @@ export default {
       stock: {
         name: "",
         quantity: 0,
-        unitPrice: 0, // UnitPrice eklendi
-        companyID: 0, // CompanyID eklendi
+        unitPrice: 0,
+        companyID: 0,
       },
     };
   },

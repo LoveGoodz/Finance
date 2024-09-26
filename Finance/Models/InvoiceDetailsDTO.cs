@@ -6,6 +6,6 @@
         public int StockID { get; set; }
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
-        public decimal TotalPrice => Quantity * UnitPrice; // TotalPrice otomatik hesaplanıyor
+        public decimal TotalPrice { get; set; } // `set` eklenerek `null` hatası önlenir
     }
 }

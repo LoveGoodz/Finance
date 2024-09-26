@@ -6,6 +6,7 @@ using Finance.Data;
 using Finance.Services;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -92,7 +93,7 @@ builder.Services.AddSwaggerGen(c =>
 
 // Servisleri ekleme
 builder.Services.AddScoped<IDataAccessService, DataAccessService>();
-builder.Services.AddScoped<IAuthService, AuthService>();  
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IStockTransService, StockTransService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
@@ -104,7 +105,13 @@ builder.Services.AddScoped<IBalanceService, BalanceService>();
 // IStockService ve StockService'i DI sistemine ekliyoruz
 builder.Services.AddScoped<IStockService, StockService>();
 
-builder.Services.AddControllers();
+// JSON serileþtirici ayarlarý (ReferenceHandler.IgnoreCycles ile döngüsel referanslarý engelle)
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
 
 // CORS yapýlandýrmasý
 builder.Services.AddCors(options =>

@@ -30,7 +30,7 @@
 <script>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import store from "../store"; // Vuex store'u ekliyoruz
+import store from "../store";
 
 export default {
   setup() {
@@ -42,15 +42,21 @@ export default {
 
     const login = async () => {
       loading.value = true;
-      const success = await store.dispatch("login", {
-        username: username.value,
-        password: password.value,
-      });
-      loading.value = false;
-      if (success) {
-        router.push("/invoice");
-      } else {
-        errorMessage.value = "Geçersiz kullanıcı adı veya şifre.";
+      try {
+        await store.dispatch("login", {
+          username: username.value,
+          password: password.value,
+        });
+
+        if (store.getters.isAuthenticated) {
+          router.push("/invoice");
+        } else {
+          errorMessage.value = "Geçersiz kullanıcı adı veya şifre.";
+        }
+      } catch (error) {
+        errorMessage.value = "Giriş sırasında bir hata oluştu.";
+      } finally {
+        loading.value = false;
       }
     };
 

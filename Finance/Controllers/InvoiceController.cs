@@ -10,19 +10,17 @@ namespace Finance.Controllers
     [ApiController]
     public class InvoiceController : ControllerBase
     {
-        private readonly IDataAccessService _dataAccessService;
         private readonly IInvoiceService _invoiceService;
 
-        public InvoiceController(IDataAccessService dataAccessService, IInvoiceService invoiceService)
+        public InvoiceController(IInvoiceService invoiceService)
         {
-            _dataAccessService = dataAccessService;
             _invoiceService = invoiceService;
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Invoice>> GetInvoiceById(int id)
+        public async Task<ActionResult<InvoiceDTO>> GetInvoiceById(int id)
         {
-            var invoice = await _dataAccessService.GetByIdAsync<Invoice>(id);
+            var invoice = await _invoiceService.GetInvoiceByIdAsync(id);
             if (invoice == null)
             {
                 return NotFound(new { Message = "Fatura bulunamadı." });
@@ -32,15 +30,15 @@ namespace Finance.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Invoice>> PostInvoice(InvoiceDTO invoiceDto)
+        public async Task<ActionResult<InvoiceDTO>> PostInvoice(InvoiceDTO invoiceDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(new { Message = "Geçersiz model verisi.", ModelState });
             }
 
-            var invoice = await _invoiceService.CreateInvoiceAsync(invoiceDto);
-            return CreatedAtAction(nameof(GetInvoiceById), new { id = invoice.ID }, invoice);
+            var createdInvoice = await _invoiceService.CreateInvoiceAsync(invoiceDto);
+            return CreatedAtAction(nameof(GetInvoiceById), new { id = createdInvoice.ID }, createdInvoice);
         }
 
         [HttpPut("approve/{id}")]
@@ -58,12 +56,6 @@ namespace Finance.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutInvoice(int id, InvoiceDTO invoiceDto)
         {
-            var invoice = await _dataAccessService.GetByIdAsync<Invoice>(id);
-            if (invoice == null)
-            {
-                return NotFound(new { Message = "Fatura bulunamadı." });
-            }
-
             var updated = await _invoiceService.UpdateInvoiceAsync(id, invoiceDto);
             if (!updated)
             {

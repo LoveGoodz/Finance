@@ -2,7 +2,6 @@
   <div class="stock-list-container">
     <h1>Stok Listesi</h1>
 
-    <!-- Şirket seçme kısmı -->
     <div>
       <label for="companySelect">Şirket Seç:</label>
       <select
@@ -21,13 +20,11 @@
       </select>
     </div>
 
-    <!-- Eğer hata mesajı varsa göster -->
-    <p v-if="stocks.length === 0 && errorMessage" class="error">
+    <p v-if="displayedStocks.length === 0 && errorMessage" class="error">
       {{ errorMessage }}
     </p>
 
-    <!-- Eğer stok listesi varsa tabloyu göster -->
-    <table v-if="stocks.length > 0">
+    <table v-if="displayedStocks.length > 0">
       <thead>
         <tr>
           <th>ID</th>
@@ -39,7 +36,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="stock in stocks" :key="stock.id">
+        <tr v-for="stock in displayedStocks" :key="stock.id">
           <td class="stock-data">{{ stock.id }}</td>
           <td class="stock-data">{{ stock.name }}</td>
           <td class="stock-data">{{ stock.quantity }}</td>
@@ -60,8 +57,7 @@
       </tbody>
     </table>
 
-    <!-- Eğer stok listesi boşsa gösterilecek mesaj -->
-    <p v-if="stocks.length === 0 && !errorMessage">
+    <p v-if="displayedStocks.length === 0 && !errorMessage">
       Listelenecek stok bulunamadı.
     </p>
   </div>
@@ -74,41 +70,32 @@ import { ref, computed, onMounted } from "vue";
 export default {
   setup() {
     const store = useStore();
-    const stocks = computed(() => store.getters.getStocks); // Tüm stoklar
-    const companies = computed(() => store.getters.getCompanies); // Şirketler
-    const selectedCompany = ref(""); // Seçilen şirket ID
-    const errorMessage = computed(() => store.getters.getError); // Hata mesajı
+    const stocks = computed(() => store.getters.getStocks || []);
+    const filteredStocks = computed(
+      () => store.getters.getFilteredStocks || []
+    );
+    const companies = computed(() => store.getters.getCompanies || []);
+    const selectedCompany = ref("");
+    const errorMessage = computed(() => store.getters.getError);
+
+    const displayedStocks = computed(() => {
+      return selectedCompany.value ? filteredStocks.value : stocks.value;
+    });
 
     onMounted(() => {
-      store.dispatch("fetchCompanies"); // Şirketleri getir
-      fetchStocks(); // Tüm stokları getir
+      store.dispatch("fetchCompanies");
+      fetchStocks();
     });
 
     const fetchStocks = () => {
-      store.dispatch("fetchStocks", selectedCompany.value); // Şirkete göre filtreleme
-    };
-
-    const viewStock = (id) => {
-      window.location.href = `/stock/${id}`; // Stok detay sayfasına yönlendirme
-    };
-
-    const deleteStock = async (id) => {
-      await store.dispatch("deleteStock", id);
-      fetchStocks(); // Silindikten sonra güncel listeyi getir
-    };
-
-    const editStock = (id) => {
-      window.location.href = `/stock/edit/${id}`; // Düzenleme sayfasına yönlendirme
+      store.dispatch("fetchStocks", selectedCompany.value);
     };
 
     return {
-      stocks,
+      displayedStocks,
       companies,
       selectedCompany,
       fetchStocks,
-      viewStock,
-      deleteStock,
-      editStock,
       errorMessage,
     };
   },
