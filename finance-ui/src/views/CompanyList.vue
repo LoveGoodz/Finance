@@ -39,12 +39,12 @@
 <script>
 import { useStore } from "vuex";
 import { computed, onMounted } from "vue";
-import { useRouter } from "vue-router"; // Router'ı ekleyelim
+import { useRouter } from "vue-router";
 
 export default {
   setup() {
     const store = useStore();
-    const router = useRouter(); // Router'ı ekleyelim
+    const router = useRouter();
     const companies = computed(() => store.getters.getCompanies);
 
     onMounted(() => {
@@ -60,7 +60,7 @@ export default {
     };
 
     const editCompany = (id) => {
-      router.push(`/company/edit/${id}`); // Düzenleme sayfasına yönlendirme
+      router.push(`/company/edit/${id}`);
     };
 
     return {

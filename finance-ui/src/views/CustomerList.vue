@@ -75,7 +75,7 @@ export default {
     const customers = computed(() => store.getters.getCustomers);
     const companies = computed(() => store.getters.getCompanies);
     const selectedCompany = ref("");
-    const errorMessage = computed(() => store.getters.getError); // Hata mesajını almak
+    const errorMessage = computed(() => store.getters.getError);
 
     onMounted(() => {
       store.dispatch("fetchCompanies");

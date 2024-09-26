@@ -13,17 +13,41 @@ namespace Finance.Services
             _context = context;
         }
 
-        public async Task<Invoice> GetInvoiceByIdAsync(int id)
+        public async Task<InvoiceDTO> GetInvoiceByIdAsync(int id)
         {
-            return await _context.Invoices
+            var invoice = await _context.Invoices
                 .Include(i => i.InvoiceDetails)
                 .Include(i => i.Company)
                 .Include(i => i.Customer)
                 .FirstOrDefaultAsync(i => i.ID == id);
+
+            if (invoice == null) return null;
+
+            return new InvoiceDTO
+            {
+                ID = invoice.ID,
+                CustomerID = invoice.CustomerID,
+                CompanyID = invoice.CompanyID,
+                CustomerName = invoice.Customer?.Name ?? "Müşteri bilgisi eksik",
+                CompanyName = invoice.Company?.Name ?? "Şirket bilgisi eksik",
+                InvoiceDate = invoice.InvoiceDate,
+                TotalAmount = invoice.TotalAmount,
+                Series = invoice.Series,
+                Status = invoice.Status,
+                InvoiceDetails = invoice.InvoiceDetails.Select(detail => new InvoiceDetailsDTO
+                {
+                    InvoiceID = detail.InvoiceID,
+                    StockID = detail.StockID,
+                    Quantity = detail.Quantity,
+                    UnitPrice = detail.UnitPrice,
+                    TotalPrice = detail.Quantity * detail.UnitPrice // Hesaplama buraya taşındı
+                }).ToList()
+            };
         }
 
-        public async Task<Invoice> CreateInvoiceAsync(InvoiceDTO invoiceDto)
+        public async Task<InvoiceDTO> CreateInvoiceAsync(InvoiceDTO invoiceDto)
         {
+            // Yeni fatura nesnesini oluştur
             var invoice = new Invoice
             {
                 CustomerID = invoiceDto.CustomerID,
@@ -38,15 +62,32 @@ namespace Finance.Services
                     StockID = detail.StockID,
                     Quantity = detail.Quantity,
                     UnitPrice = detail.UnitPrice,
-                    TotalPrice = detail.Quantity * detail.UnitPrice,
+                    TotalPrice = detail.Quantity * detail.UnitPrice, // TotalPrice hesaplanıyor
                     CreatedAt = DateTime.UtcNow
                 }).ToList()
             };
 
+            // Aynı fatura birden fazla kez eklenmemesi için kontrol (isteğe bağlı)
+            var existingInvoice = await _context.Invoices
+                .FirstOrDefaultAsync(i => i.Series == invoice.Series && i.CustomerID == invoice.CustomerID);
+
+            if (existingInvoice != null)
+            {
+                throw new InvalidOperationException("Bu seri ve müşteriyle zaten bir fatura mevcut.");
+            }
+
+            // Faturayı veritabanına ekle
             _context.Invoices.Add(invoice);
             await _context.SaveChangesAsync();
-            return invoice;
+
+            // DTO'nun yeni özelliklerini doldurun
+            invoiceDto.ID = invoice.ID;
+            invoiceDto.CustomerName = (await _context.Customers.FindAsync(invoiceDto.CustomerID))?.Name ?? "Müşteri bilgisi eksik";
+            invoiceDto.CompanyName = (await _context.Companies.FindAsync(invoiceDto.CompanyID))?.Name ?? "Şirket bilgisi eksik";
+
+            return invoiceDto;
         }
+
 
         public async Task<bool> ApproveInvoiceAsync(int id)
         {
@@ -125,11 +166,12 @@ namespace Finance.Services
             return true;
         }
 
-        public async Task<(IEnumerable<Invoice> Invoices, int TotalRecords)> GetInvoicesAsync(string series, int pageNumber, int pageSize)
+        public async Task<(IEnumerable<InvoiceDTO> Invoices, int TotalRecords)> GetInvoicesAsync(string series, int pageNumber, int pageSize)
         {
             var query = _context.Invoices
                 .Include(i => i.Company)
                 .Include(i => i.Customer)
+                .Include(i => i.InvoiceDetails) // Details de dahil edildi
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(series))
@@ -143,7 +185,28 @@ namespace Finance.Services
                 .Take(pageSize)
                 .ToListAsync();
 
-            return (invoices, totalRecords);
+            var invoiceDtos = invoices.Select(invoice => new InvoiceDTO
+            {
+                ID = invoice.ID,
+                CustomerID = invoice.CustomerID,
+                CompanyID = invoice.CompanyID,
+                CustomerName = invoice.Customer?.Name ?? "Müşteri bilgisi eksik",
+                CompanyName = invoice.Company?.Name ?? "Şirket bilgisi eksik",
+                InvoiceDate = invoice.InvoiceDate,
+                TotalAmount = invoice.TotalAmount,
+                Series = invoice.Series,
+                Status = invoice.Status,
+                InvoiceDetails = invoice.InvoiceDetails.Select(detail => new InvoiceDetailsDTO
+                {
+                    InvoiceID = detail.InvoiceID,
+                    StockID = detail.StockID,
+                    Quantity = detail.Quantity,
+                    UnitPrice = detail.UnitPrice,
+                    TotalPrice = detail.Quantity * detail.UnitPrice // Hesaplama buraya taşındı
+                }).ToList()
+            });
+
+            return (invoiceDtos, totalRecords);
         }
     }
 }

@@ -20,47 +20,70 @@
         required
       />
 
+      <label for="unitPrice">Birim Fiyat:</label>
+      <input
+        type="number"
+        step="0.01"
+        v-model="stock.unitPrice"
+        id="unitPrice"
+        class="form-input"
+        required
+      />
+
       <button type="submit" class="btn-primary">Kaydet</button>
     </form>
   </div>
 </template>
 
 <script>
+import { ref, onMounted } from "vue";
 import axios from "axios";
+import { useRoute, useRouter } from "vue-router";
 
 export default {
-  data() {
-    return {
-      stock: {
-        name: "",
-        quantity: 0,
-      },
+  setup() {
+    const stock = ref({
+      name: "",
+      quantity: 0,
+      unitPrice: 0,
+    });
+
+    const route = useRoute();
+    const router = useRouter();
+
+    onMounted(async () => {
+      const token = localStorage.getItem("token");
+      const stockId = route.params.id;
+      try {
+        const response = await axios.get(
+          `https://localhost:7093/api/stock/${stockId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        stock.value = response.data;
+      } catch (error) {
+        console.error("Stok bilgileri alınamadı:", error);
+      }
+    });
+
+    const submitForm = async () => {
+      const token = localStorage.getItem("token");
+      try {
+        await axios.put(`/api/stock/${route.params.id}`, stock.value, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        router.push("/stock");
+      } catch (error) {
+        console.error("Stok kaydı güncellenemedi:", error);
+      }
     };
-  },
-  methods: {
-    fetchStock() {
-      axios
-        .get(`/api/stock/${this.$route.params.id}`)
-        .then((response) => {
-          this.stock = response.data.Data;
-        })
-        .catch((error) => {
-          console.error("Stok bilgileri alınamadı:", error);
-        });
-    },
-    submitForm() {
-      axios
-        .put(`/api/stock/${this.$route.params.id}`, this.stock)
-        .then(() => {
-          this.$router.push("/stock");
-        })
-        .catch((error) => {
-          console.error("Stok kaydı güncellenemedi:", error);
-        });
-    },
-  },
-  created() {
-    this.fetchStock();
+
+    return { stock, submitForm };
   },
 };
 </script>

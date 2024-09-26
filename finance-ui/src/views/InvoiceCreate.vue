@@ -2,11 +2,14 @@
   <div class="invoice-create-container">
     <h1>Fatura Oluştur</h1>
 
-    <!-- Fatura oluşturma formu -->
     <form @submit.prevent="createInvoice">
       <div class="form-group">
         <label for="customerID">Müşteri Seç:</label>
-        <select v-model="invoice.customerID" required>
+        <select
+          v-model="invoice.customerID"
+          @change="setCompanyIDForCustomer"
+          required
+        >
           <option
             v-for="customer in customers"
             :key="customer.id"
@@ -32,7 +35,6 @@
         <input type="text" id="series" v-model="invoice.series" />
       </div>
 
-      <!-- Fatura Detayları -->
       <h2>Fatura Detayları</h2>
       <div
         v-for="(detail, index) in invoice.invoiceDetails"
@@ -94,6 +96,7 @@ export default {
     return {
       invoice: {
         customerID: null,
+        companyID: null,
         invoiceDate: new Date().toISOString().slice(0, 10),
         series: "",
         status: "Taslak",
@@ -121,6 +124,15 @@ export default {
     },
     removeDetail(index) {
       this.invoice.invoiceDetails.splice(index, 1);
+    },
+
+    setCompanyIDForCustomer() {
+      const selectedCustomer = this.customers.find(
+        (customer) => customer.id === this.invoice.customerID
+      );
+      if (selectedCustomer) {
+        this.invoice.companyID = selectedCustomer.companyID;
+      }
     },
     async createInvoice() {
       try {
