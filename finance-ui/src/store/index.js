@@ -1,6 +1,7 @@
 import { createStore } from "vuex";
 import axios from "axios";
 
+// Axios yapılandırması
 axios.defaults.baseURL = "https://localhost:7093";
 
 const token = localStorage.getItem("token");
@@ -8,16 +9,19 @@ if (token) {
   axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 }
 
+// Vuex Store oluşturma
 const store = createStore({
   state: {
     user: null,
+    token: token || "",
     companies: [],
     customers: [],
     invoices: [],
     stocks: [],
     filteredStocks: [],
     selectedStock: {},
-    token: token || "",
+    customerBalances: [],
+    companyBalances: [],
     error: null,
     loading: false,
   },
@@ -46,6 +50,12 @@ const store = createStore({
     },
     SET_SELECTED_STOCK(state, stock) {
       state.selectedStock = stock;
+    },
+    SET_CUSTOMER_BALANCES(state, balances) {
+      state.customerBalances = balances;
+    },
+    SET_COMPANY_BALANCES(state, balances) {
+      state.companyBalances = balances;
     },
     SET_ERROR(state, error) {
       state.error = error;
@@ -96,6 +106,8 @@ const store = createStore({
         commit("SET_LOADING", false);
       }
     },
+
+    // Şirket işlemleri
     async fetchCompanies({ commit }) {
       commit("SET_LOADING", true);
       try {
@@ -107,6 +119,8 @@ const store = createStore({
         commit("SET_LOADING", false);
       }
     },
+
+    // Müşteri işlemleri
     async fetchCustomers({ commit }, companyId = "") {
       commit("SET_LOADING", true);
       try {
@@ -117,16 +131,13 @@ const store = createStore({
         const response = await axios.get(url);
         commit("SET_CUSTOMERS", response.data);
       } catch (error) {
-        if (error.response && error.response.status === 404) {
-          commit("SET_CUSTOMERS", []);
-          commit("SET_ERROR", "Listelenecek müşteri bulunamadı.");
-        } else {
-          commit("SET_ERROR", "Müşteri verileri alınamadı.");
-        }
+        commit("SET_ERROR", "Müşteri verileri alınamadı.");
       } finally {
         commit("SET_LOADING", false);
       }
     },
+
+    // Fatura işlemleri
     async fetchInvoices({ commit }) {
       commit("SET_LOADING", true);
       try {
@@ -138,12 +149,12 @@ const store = createStore({
         commit("SET_LOADING", false);
       }
     },
-    async deleteInvoice({ commit, dispatch }, id) {
+
+    async deleteInvoice({ commit }, id) {
       commit("SET_LOADING", true);
       try {
         await axios.delete(`/api/invoice/${id}`);
         commit("REMOVE_INVOICE", id);
-        dispatch("fetchInvoices");
       } catch (error) {
         commit("SET_ERROR", "Fatura silinemedi.");
       } finally {
@@ -165,6 +176,8 @@ const store = createStore({
         commit("SET_LOADING", false);
       }
     },
+
+    // Stok işlemleri
     async fetchStocks({ commit }, companyId = "") {
       commit("SET_LOADING", true);
       commit("SET_ERROR", null);
@@ -174,20 +187,10 @@ const store = createStore({
           url += `?companyId=${companyId}`;
         }
         const response = await axios.get(url);
-
-        if (companyId) {
-          commit("SET_FILTERED_STOCKS", response.data || []);
-        } else {
-          commit("SET_STOCKS", response.data || []);
-          commit("SET_FILTERED_STOCKS", []);
-        }
+        commit("SET_STOCKS", response.data || []);
+        commit("SET_FILTERED_STOCKS", companyId ? response.data : []);
       } catch (error) {
-        if (error.response && error.response.status === 404) {
-          commit("SET_FILTERED_STOCKS", []);
-          commit("SET_ERROR", "Listelenecek stok bulunamadı.");
-        } else {
-          commit("SET_ERROR", "Stok verileri alınamadı.");
-        }
+        commit("SET_ERROR", "Stok verileri alınamadı.");
       } finally {
         commit("SET_LOADING", false);
       }
@@ -227,6 +230,30 @@ const store = createStore({
       }
     },
 
+    // Bakiye işlemleri
+    async fetchCompanyBalances({ commit }) {
+      commit("SET_LOADING", true);
+      try {
+        const response = await axios.get("/api/balance?type=company");
+        commit("SET_COMPANY_BALANCES", response.data.data || []);
+      } catch (error) {
+        commit("SET_ERROR", "Şirket bakiyesi verileri alınamadı.");
+      } finally {
+        commit("SET_LOADING", false);
+      }
+    },
+    async fetchCustomerBalances({ commit }) {
+      commit("SET_LOADING", true);
+      try {
+        const response = await axios.get("/api/balance?type=customer");
+        commit("SET_CUSTOMER_BALANCES", response.data.data || []);
+      } catch (error) {
+        commit("SET_ERROR", "Müşteri bakiyesi verileri alınamadı.");
+      } finally {
+        commit("SET_LOADING", false);
+      }
+    },
+
     logout({ commit }) {
       commit("LOGOUT");
     },
@@ -243,6 +270,8 @@ const store = createStore({
         ? state.filteredStocks
         : state.stocks,
     getSelectedStock: (state) => state.selectedStock,
+    getCustomerBalances: (state) => state.customerBalances,
+    getCompanyBalances: (state) => state.companyBalances,
     getError: (state) => state.error,
     isAuthenticated: (state) => !!state.token,
     isLoading: (state) => state.loading,

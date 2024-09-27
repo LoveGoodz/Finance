@@ -110,6 +110,48 @@ namespace Finance.Services
             invoice.Status = newStatus;
             invoice.UpdatedAt = DateTime.UtcNow;
 
+            // Balance güncelleme işlemi
+            if (newStatus == "Onaylandı")
+            {
+                // Müşteri Balance güncelle
+                var customerBalance = await _context.Balances.FirstOrDefaultAsync(b => b.CustomerID == invoice.CustomerID);
+                if (customerBalance == null)
+                {
+                    customerBalance = new Balance
+                    {
+                        CustomerID = invoice.CustomerID,
+                        TotalDebit = invoice.TotalAmount,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _context.Balances.Add(customerBalance);
+                }
+                else
+                {
+                    customerBalance.TotalDebit += invoice.TotalAmount;
+                    customerBalance.UpdatedAt = DateTime.UtcNow;
+                }
+
+                // Şirket Balance güncelle
+                var companyBalance = await _context.Balances.FirstOrDefaultAsync(b => b.CompanyID == invoice.CompanyID);
+                if (companyBalance == null)
+                {
+                    companyBalance = new Balance
+                    {
+                        CompanyID = invoice.CompanyID,
+                        TotalCredit = invoice.TotalAmount,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _context.Balances.Add(companyBalance);
+                }
+                else
+                {
+                    companyBalance.TotalCredit += invoice.TotalAmount;
+                    companyBalance.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+
             await _context.SaveChangesAsync();
             return true;
         }

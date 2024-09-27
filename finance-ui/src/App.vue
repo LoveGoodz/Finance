@@ -9,6 +9,8 @@
       <router-link to="/company/create">Şirket Ekle</router-link>
       <router-link to="/stock">Stok Listesi</router-link>
       <router-link to="/stock/create">Stok Ekle</router-link>
+      <router-link to="/balance/customers">Müşteri Bakiyeleri</router-link>
+      <router-link to="/balance/companies">Şirket Bakiyeleri</router-link>
       <button @click="logout">Çıkış Yap</button>
     </nav>
     <router-view />
