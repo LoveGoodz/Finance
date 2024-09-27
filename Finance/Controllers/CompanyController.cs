@@ -28,7 +28,6 @@ namespace Finance.Controllers
                 return BadRequest(new { Message = "PageNumber ve PageSize sıfırdan büyük olmalıdır.", Status = 400 });
             }
 
-            // Şirketleri filtreleyip sayfalı şekilde getirme
             var companies = await _dataAccessService.GetPagedAsync<Company>(
                 pageNumber,
                 pageSize,

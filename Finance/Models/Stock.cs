@@ -3,7 +3,7 @@
 public class Stock
 {
     public int ID { get; set; }
-    public int CompanyID { get; set; } 
+    public int CompanyID { get; set; }
     public string Name { get; set; }
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
@@ -15,3 +15,4 @@ public class Stock
     public ICollection<StockTrans> StockTrans { get; set; }
     public ICollection<Balance> Balances { get; set; }
 }
+

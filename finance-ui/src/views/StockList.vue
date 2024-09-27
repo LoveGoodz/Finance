@@ -66,10 +66,12 @@
 <script>
 import { useStore } from "vuex";
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 
 export default {
   setup() {
     const store = useStore();
+    const router = useRouter();
     const stocks = computed(() => store.getters.getStocks || []);
     const filteredStocks = computed(
       () => store.getters.getFilteredStocks || []
@@ -83,6 +85,7 @@ export default {
     });
 
     onMounted(() => {
+      selectedCompany.value = "";
       store.dispatch("fetchCompanies");
       fetchStocks();
     });
@@ -91,12 +94,31 @@ export default {
       store.dispatch("fetchStocks", selectedCompany.value);
     };
 
+    const viewStock = (id) => {
+      router.push({ name: "stock-details", params: { id } });
+    };
+
+    const editStock = (id) => {
+      router.push({ name: "stock-edit", params: { id } });
+    };
+
+    const deleteStock = async (stockId) => {
+      if (confirm("Stok kaydını silmek istediğinizden emin misiniz?")) {
+        await store.dispatch("deleteStock", stockId);
+        alert("Stok kaydı başarıyla silindi.");
+        fetchStocks();
+      }
+    };
+
     return {
       displayedStocks,
       companies,
       selectedCompany,
       fetchStocks,
       errorMessage,
+      viewStock,
+      editStock,
+      deleteStock,
     };
   },
 };
