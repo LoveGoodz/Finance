@@ -1,6 +1,9 @@
 ﻿using Finance.Data;
 using Finance.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Finance.Services
 {
@@ -55,13 +58,19 @@ namespace Finance.Services
             return true;
         }
 
-        public async Task<(int TotalRecords, List<Balance> Data)> GetBalancesAsync(int? companyId, int pageNumber, int pageSize)
+        public async Task<(int TotalRecords, List<Balance> Data)> GetBalancesAsync(int? companyId, int? customerId, int pageNumber, int pageSize)
         {
             var query = _context.Balances.AsQueryable();
 
+            // Eğer CompanyID verilmişse, şirket balanslarını filtrele
             if (companyId.HasValue)
             {
                 query = query.Where(b => b.CompanyID == companyId);
+            }
+            // Eğer CustomerID verilmişse, müşteri balanslarını filtrele
+            else if (customerId.HasValue)
+            {
+                query = query.Where(b => b.CustomerID == customerId);
             }
 
             var totalRecords = await query.CountAsync();
@@ -70,6 +79,18 @@ namespace Finance.Services
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
+
+            // Her balance kaydının güncellenmiş hesaplamalarını yap
+            foreach (var balance in balances)
+            {
+                balance.TotalDebit = await _context.Invoices
+                    .Where(i => i.CustomerID == balance.CustomerID && i.Status == "Onaylandı")
+                    .SumAsync(i => i.TotalAmount);
+
+                balance.TotalCredit = await _context.Invoices
+                    .Where(i => i.CompanyID == balance.CompanyID && i.Status == "Onaylandı")
+                    .SumAsync(i => i.TotalAmount);
+            }
 
             return (totalRecords, balances);
         }

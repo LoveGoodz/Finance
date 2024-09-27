@@ -17,6 +17,8 @@ import StockList from "../views/StockList.vue";
 import StockCreate from "../views/StockCreate.vue";
 import StockEdit from "../views/StockEdit.vue";
 import StockDetails from "../views/StockDetails.vue";
+import CustomerBalanceList from "../views/CustomerBalanceList.vue";
+import CompanyBalanceList from "../views/CompanyBalanceList.vue";
 import store from "../store";
 
 const routes = [
@@ -126,6 +128,18 @@ const routes = [
     path: "/stock/:id",
     name: "stock-details",
     component: StockDetails,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/balance/customers",
+    name: "customer-balance-list",
+    component: CustomerBalanceList,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/balance/companies",
+    name: "company-balance-list",
+    component: CompanyBalanceList,
     meta: { requiresAuth: true },
   },
   {
