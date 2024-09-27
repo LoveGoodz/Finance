@@ -2,15 +2,15 @@
 {
     public class InvoiceDTO
     {
-        public int ID { get; set; } // Fatura ID'si
-        public int CustomerID { get; set; }  // Müşteri ID'si
-        public string CustomerName { get; set; } // Müşteri Adı
-        public int CompanyID { get; set; }  // Şirket ID'si
-        public string CompanyName { get; set; } // Şirket Adı
-        public DateTime InvoiceDate { get; set; }  // Fatura tarihi
-        public string Series { get; set; }  // Fatura serisi
-        public decimal TotalAmount { get; set; }  // Toplam tutar
-        public List<InvoiceDetailsDTO> InvoiceDetails { get; set; }  // Fatura detayları
-        public string Status { get; set; } = "Taslak";  // Varsayılan olarak "Taslak"
+        public int ID { get; set; }
+        public int CustomerID { get; set; }
+        public string? CustomerName { get; set; } 
+        public int CompanyID { get; set; }
+        public string? CompanyName { get; set; }
+        public DateTime InvoiceDate { get; set; }
+        public string Series { get; set; }
+        public decimal TotalAmount { get; set; }
+        public List<InvoiceDetailsDTO> InvoiceDetails { get; set; }
+        public string Status { get; set; } = "Taslak";
     }
 }

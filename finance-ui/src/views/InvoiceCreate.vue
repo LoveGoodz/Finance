@@ -23,7 +23,7 @@
       <div class="form-group">
         <label for="invoiceDate">Fatura Tarihi:</label>
         <input
-          type="date"
+          type="datetime-local"
           id="invoiceDate"
           v-model="invoice.invoiceDate"
           required
@@ -44,18 +44,26 @@
         <h3>Ürün {{ index + 1 }}</h3>
 
         <div class="form-group">
-          <label for="stockID">Ürün (Stok) ID:</label>
-          <input type="number" v-model="detail.stockID" required />
+          <label for="stockID">Ürün:</label>
+          <select
+            v-model="detail.stockID"
+            @change="updateUnitPrice(index)"
+            required
+          >
+            <option v-for="stock in stocks" :key="stock.id" :value="stock.id">
+              {{ stock.name }}
+            </option>
+          </select>
         </div>
 
         <div class="form-group">
           <label for="quantity">Miktar:</label>
-          <input type="number" v-model="detail.quantity" required />
-        </div>
-
-        <div class="form-group">
-          <label for="unitPrice">Birim Fiyat:</label>
-          <input type="number" v-model="detail.unitPrice" required />
+          <input
+            type="number"
+            v-model="detail.quantity"
+            @input="calculateTotalPrice(index)"
+            required
+          />
         </div>
 
         <button
@@ -70,16 +78,6 @@
       <button type="button" class="btn btn-secondary" @click="addDetail">
         Yeni Ürün Ekle
       </button>
-
-      <div class="form-group">
-        <label for="totalAmount">Toplam Tutar:</label>
-        <input
-          type="number"
-          id="totalAmount"
-          v-model="invoice.totalAmount"
-          required
-        />
-      </div>
 
       <button type="submit" class="btn btn-primary">Fatura Oluştur</button>
       <p v-if="successMessage" class="success">{{ successMessage }}</p>
@@ -97,7 +95,7 @@ export default {
       invoice: {
         customerID: null,
         companyID: null,
-        invoiceDate: new Date().toISOString().slice(0, 10),
+        invoiceDate: new Date().toISOString().slice(0, 16),
         series: "",
         status: "Taslak",
         totalAmount: 0,
@@ -110,11 +108,41 @@ export default {
         ],
       },
       customers: [],
+      stocks: [],
       successMessage: "",
       errorMessage: "",
     };
   },
   methods: {
+    async fetchCustomersAndStocks() {
+      const token = localStorage.getItem("token");
+
+      try {
+        const customerResponse = await axios.get(
+          "https://localhost:7093/api/Customer",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        this.customers = customerResponse.data;
+
+        const stockResponse = await axios.get(
+          "https://localhost:7093/api/Stock",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        this.stocks = stockResponse.data;
+      } catch (error) {
+        console.error("Veriler yüklenirken hata oluştu:", error);
+        this.errorMessage = "Veriler yüklenirken hata oluştu.";
+      }
+    },
+
     addDetail() {
       this.invoice.invoiceDetails.push({
         stockID: null,
@@ -122,6 +150,7 @@ export default {
         unitPrice: null,
       });
     },
+
     removeDetail(index) {
       this.invoice.invoiceDetails.splice(index, 1);
     },
@@ -134,6 +163,27 @@ export default {
         this.invoice.companyID = selectedCustomer.companyID;
       }
     },
+
+    updateUnitPrice(index) {
+      const stockID = this.invoice.invoiceDetails[index].stockID;
+      const selectedStock = this.stocks.find((stock) => stock.id === stockID);
+      if (selectedStock) {
+        this.invoice.invoiceDetails[index].unitPrice = selectedStock.unitPrice;
+        this.calculateTotalPrice(index);
+      }
+    },
+
+    calculateTotalPrice(index) {
+      const detail = this.invoice.invoiceDetails[index];
+      if (detail.unitPrice && detail.quantity) {
+        detail.totalPrice = detail.unitPrice * detail.quantity;
+      }
+      this.invoice.totalAmount = this.invoice.invoiceDetails.reduce(
+        (sum, d) => sum + (d.unitPrice * d.quantity || 0),
+        0
+      );
+    },
+
     async createInvoice() {
       try {
         const token = localStorage.getItem("token");
@@ -142,9 +192,23 @@ export default {
           return;
         }
 
+        const invoiceData = {
+          customerID: this.invoice.customerID,
+          companyID: this.invoice.companyID,
+          invoiceDate: this.invoice.invoiceDate,
+          series: this.invoice.series,
+          status: this.invoice.status,
+          totalAmount: this.invoice.totalAmount,
+          invoiceDetails: this.invoice.invoiceDetails.map((detail) => ({
+            stockID: detail.stockID,
+            quantity: detail.quantity,
+            unitPrice: detail.unitPrice,
+          })),
+        };
+
         const response = await axios.post(
           "https://localhost:7093/api/Invoice",
-          this.invoice,
+          invoiceData,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -152,7 +216,7 @@ export default {
           }
         );
 
-        this.successMessage = `Fatura başarıyla oluşturuldu! Fatura ID: ${response.data.id}, Tutar: ${response.data.totalAmount}`;
+        this.successMessage = `Fatura başarıyla oluşturuldu! Fatura ID: ${response.data.id}`;
         this.errorMessage = "";
       } catch (error) {
         console.error("Fatura oluşturulurken hata oluştu:", error);
@@ -161,18 +225,9 @@ export default {
         this.successMessage = "";
       }
     },
-    async fetchCustomers() {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("https://localhost:7093/api/Customer", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      this.customers = response.data;
-    },
   },
   mounted() {
-    this.fetchCustomers();
+    this.fetchCustomersAndStocks();
   },
 };
 </script>

@@ -11,5 +11,6 @@ namespace Finance.Services
         Task<Stock> AddStockAsync(StockDTO stockDto);
         Task<bool> UpdateStockAsync(int id, StockDTO stockDto);
         Task<bool> DeleteStockAsync(int id);
+        Task<bool> UpdateStockForInvoice(int stockID, int quantity, string status);
     }
 }

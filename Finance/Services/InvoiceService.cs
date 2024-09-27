@@ -1,22 +1,28 @@
 ﻿using Finance.Data;
 using Finance.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Finance.Services
 {
     public class InvoiceService : IInvoiceService
     {
         private readonly FinanceContext _context;
+        private readonly IStockService _stockService;
 
-        public InvoiceService(FinanceContext context)
+        public InvoiceService(FinanceContext context, IStockService stockService)
         {
             _context = context;
+            _stockService = stockService;
         }
 
         public async Task<InvoiceDTO> GetInvoiceByIdAsync(int id)
         {
             var invoice = await _context.Invoices
                 .Include(i => i.InvoiceDetails)
+                .ThenInclude(d => d.Stock)
                 .Include(i => i.Company)
                 .Include(i => i.Customer)
                 .FirstOrDefaultAsync(i => i.ID == id);
@@ -40,14 +46,14 @@ namespace Finance.Services
                     StockID = detail.StockID,
                     Quantity = detail.Quantity,
                     UnitPrice = detail.UnitPrice,
-                    TotalPrice = detail.Quantity * detail.UnitPrice // Hesaplama buraya taşındı
+                    TotalPrice = detail.Quantity * detail.UnitPrice,
+                    StockName = detail.Stock?.Name
                 }).ToList()
             };
         }
 
         public async Task<InvoiceDTO> CreateInvoiceAsync(InvoiceDTO invoiceDto)
         {
-            // Yeni fatura nesnesini oluştur
             var invoice = new Invoice
             {
                 CustomerID = invoiceDto.CustomerID,
@@ -62,12 +68,11 @@ namespace Finance.Services
                     StockID = detail.StockID,
                     Quantity = detail.Quantity,
                     UnitPrice = detail.UnitPrice,
-                    TotalPrice = detail.Quantity * detail.UnitPrice, // TotalPrice hesaplanıyor
+                    TotalPrice = detail.Quantity * detail.UnitPrice,
                     CreatedAt = DateTime.UtcNow
                 }).ToList()
             };
 
-            // Aynı fatura birden fazla kez eklenmemesi için kontrol (isteğe bağlı)
             var existingInvoice = await _context.Invoices
                 .FirstOrDefaultAsync(i => i.Series == invoice.Series && i.CustomerID == invoice.CustomerID);
 
@@ -76,11 +81,9 @@ namespace Finance.Services
                 throw new InvalidOperationException("Bu seri ve müşteriyle zaten bir fatura mevcut.");
             }
 
-            // Faturayı veritabanına ekle
             _context.Invoices.Add(invoice);
             await _context.SaveChangesAsync();
 
-            // DTO'nun yeni özelliklerini doldurun
             invoiceDto.ID = invoice.ID;
             invoiceDto.CustomerName = (await _context.Customers.FindAsync(invoiceDto.CustomerID))?.Name ?? "Müşteri bilgisi eksik";
             invoiceDto.CompanyName = (await _context.Companies.FindAsync(invoiceDto.CompanyID))?.Name ?? "Şirket bilgisi eksik";
@@ -88,44 +91,24 @@ namespace Finance.Services
             return invoiceDto;
         }
 
-
-        public async Task<bool> ApproveInvoiceAsync(int id)
+        public async Task<bool> UpdateInvoiceStatusAsync(int id, string newStatus)
         {
             var invoice = await _context.Invoices
                 .Include(i => i.InvoiceDetails)
-                .ThenInclude(d => d.Stock)
                 .FirstOrDefaultAsync(i => i.ID == id);
 
-            if (invoice == null || invoice.Status != "Taslak")
+            if (invoice == null)
             {
                 return false;
             }
 
-            invoice.Status = "Onaylandı";
-            invoice.UpdatedAt = DateTime.UtcNow;
-
             foreach (var detail in invoice.InvoiceDetails)
             {
-                var stockTrans = new StockTrans
-                {
-                    StockID = detail.StockID,
-                    InvoiceDetailsID = detail.ID,
-                    TransactionType = "Satış",
-                    Quantity = detail.Quantity,
-                    CreatedAt = DateTime.UtcNow
-                };
-                _context.StockTrans.Add(stockTrans);
+                await _stockService.UpdateStockForInvoice(detail.StockID, detail.Quantity, newStatus);
             }
 
-            var actTrans = new ActTrans
-            {
-                CustomerID = invoice.CustomerID,
-                InvoiceID = invoice.ID,
-                TransactionType = "Satış",
-                Amount = invoice.TotalAmount,
-                CreatedAt = DateTime.UtcNow
-            };
-            _context.ActTrans.Add(actTrans);
+            invoice.Status = newStatus;
+            invoice.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
             return true;
@@ -149,20 +132,42 @@ namespace Finance.Services
             invoice.Series = invoiceDto.Series;
             invoice.UpdatedAt = DateTime.UtcNow;
 
+            invoice.InvoiceDetails.Clear();
+            foreach (var detail in invoiceDto.InvoiceDetails)
+            {
+                var invoiceDetail = new InvoiceDetails
+                {
+                    StockID = detail.StockID,
+                    Quantity = detail.Quantity,
+                    UnitPrice = detail.UnitPrice,
+                    TotalPrice = detail.Quantity * detail.UnitPrice,
+                    InvoiceID = invoice.ID,
+                    CreatedAt = DateTime.UtcNow
+                };
+                invoice.InvoiceDetails.Add(invoiceDetail);
+            }
+
             await _context.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> DeleteInvoiceAsync(int id)
         {
-            var invoice = await _context.Invoices.FindAsync(id);
+            var invoice = await _context.Invoices
+                .Include(i => i.InvoiceDetails)
+                .FirstOrDefaultAsync(i => i.ID == id);
+
             if (invoice == null || invoice.Status == "Onaylandı")
             {
                 return false;
             }
 
+            _context.InvoiceDetails.RemoveRange(invoice.InvoiceDetails);
+            await _context.SaveChangesAsync();
+
             _context.Invoices.Remove(invoice);
             await _context.SaveChangesAsync();
+
             return true;
         }
 
@@ -171,7 +176,8 @@ namespace Finance.Services
             var query = _context.Invoices
                 .Include(i => i.Company)
                 .Include(i => i.Customer)
-                .Include(i => i.InvoiceDetails) // Details de dahil edildi
+                .Include(i => i.InvoiceDetails)
+                .ThenInclude(d => d.Stock)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(series))
@@ -202,7 +208,8 @@ namespace Finance.Services
                     StockID = detail.StockID,
                     Quantity = detail.Quantity,
                     UnitPrice = detail.UnitPrice,
-                    TotalPrice = detail.Quantity * detail.UnitPrice // Hesaplama buraya taşındı
+                    TotalPrice = detail.Quantity * detail.UnitPrice,
+                    StockName = detail.Stock?.Name
                 }).ToList()
             });
 

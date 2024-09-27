@@ -50,7 +50,7 @@ namespace Finance.Services
             {
                 Name = stockDto.Name,
                 Quantity = stockDto.Quantity,
-                UnitPrice = (decimal)stockDto.UnitPrice,  // double -> decimal dönüştürüldü
+                UnitPrice = (decimal)stockDto.UnitPrice,
                 CompanyID = stockDto.CompanyID,
                 CreatedAt = stockDto.CreatedAt,
                 UpdatedAt = stockDto.UpdatedAt
@@ -73,7 +73,7 @@ namespace Finance.Services
 
             stock.Name = stockDto.Name;
             stock.Quantity = stockDto.Quantity;
-            stock.UnitPrice = (decimal)stockDto.UnitPrice;  // double -> decimal dönüştürüldü
+            stock.UnitPrice = (decimal)stockDto.UnitPrice;
             stock.UpdatedAt = stockDto.UpdatedAt;
 
             _context.Entry(stock).State = EntityState.Modified;
@@ -94,6 +94,30 @@ namespace Finance.Services
             _context.Stocks.Remove(stock);
             await _context.SaveChangesAsync();
 
+            return true;
+        }
+
+        // Fatura durumuna göre stok güncelleme
+        public async Task<bool> UpdateStockForInvoice(int stockID, int quantity, string status)
+        {
+            var stock = await _context.Stocks.FirstOrDefaultAsync(s => s.ID == stockID);
+            if (stock == null)
+            {
+                return false;
+            }
+
+            // Fatura durumu "Onaylandı" olduğunda stok miktarını kalıcı olarak azalt
+            if (status == "Onaylandı")
+            {
+                stock.Quantity -= quantity;
+            }
+            // Fatura durumu "Reddedildi" olduğunda, miktarı geri ekle
+            else if (status == "Reddedildi")
+            {
+                stock.Quantity += quantity;
+            }
+
+            await _context.SaveChangesAsync();
             return true;
         }
     }

@@ -39,7 +39,7 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/invoice-details/:id", // Rota yolu düzeltildi
+    path: "/invoice-details/:id",
     name: "invoice-details",
     component: InvoiceDetails,
     meta: { requiresAuth: true },

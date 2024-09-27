@@ -40,17 +40,21 @@ namespace Finance.Controllers
             var createdInvoice = await _invoiceService.CreateInvoiceAsync(invoiceDto);
             return CreatedAtAction(nameof(GetInvoiceById), new { id = createdInvoice.ID }, createdInvoice);
         }
-
-        [HttpPut("approve/{id}")]
-        public async Task<IActionResult> ApproveInvoice(int id)
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateInvoiceStatus(int id, [FromBody] StatusUpdateDto statusUpdate)
         {
-            var approved = await _invoiceService.ApproveInvoiceAsync(id);
-            if (!approved)
+            if (!ModelState.IsValid || string.IsNullOrEmpty(statusUpdate.Status))
             {
-                return BadRequest(new { Message = "Fatura onaylanamadı." });
+                return BadRequest(new { Message = "Geçersiz durum verisi." });
             }
 
-            return Ok(new { Message = "Fatura başarıyla onaylandı." });
+            var updated = await _invoiceService.UpdateInvoiceStatusAsync(id, statusUpdate.Status);
+            if (!updated)
+            {
+                return BadRequest(new { Message = "Fatura durumu güncellenemedi." });
+            }
+
+            return Ok(new { Message = "Fatura durumu başarıyla güncellendi." });
         }
 
         [HttpPut("{id}")]
@@ -83,5 +87,10 @@ namespace Finance.Controllers
             var result = await _invoiceService.GetInvoicesAsync(series, pageNumber, pageSize);
             return Ok(new { TotalRecords = result.TotalRecords, Data = result.Invoices });
         }
+    }
+
+    public class StatusUpdateDto
+    {
+        public string Status { get; set; }
     }
 }

@@ -138,14 +138,12 @@ const store = createStore({
         commit("SET_LOADING", false);
       }
     },
-    async deleteInvoice({ commit, state }, id) {
+    async deleteInvoice({ commit, dispatch }, id) {
       commit("SET_LOADING", true);
       try {
-        await axios.delete(`/api/invoice/${id}`, {
-          headers: { Authorization: `Bearer ${state.token}` },
-        });
+        await axios.delete(`/api/invoice/${id}`);
         commit("REMOVE_INVOICE", id);
-        await this.dispatch("fetchInvoices");
+        dispatch("fetchInvoices");
       } catch (error) {
         commit("SET_ERROR", "Fatura silinemedi.");
       } finally {

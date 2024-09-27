@@ -2,11 +2,10 @@
   <div class="invoice-edit-container">
     <h1>Fatura Düzenle</h1>
 
-    <!-- Fatura Bilgileri -->
     <form @submit.prevent="updateInvoice">
       <div class="form-group">
         <label for="customer">Müşteri:</label>
-        <select v-model="invoice.customerId" required>
+        <select v-model="invoice.customerID" required>
           <option
             v-for="customer in customers"
             :key="customer.id"
@@ -27,21 +26,6 @@
         <input type="text" v-model="invoice.series" required />
       </div>
 
-      <div class="form-group">
-        <label for="totalAmount">Toplam Tutar:</label>
-        <input type="number" v-model="invoice.totalAmount" required />
-      </div>
-
-      <div class="form-group">
-        <label for="status">Durum:</label>
-        <select v-model="invoice.status" required>
-          <option value="Taslak">Taslak</option>
-          <option value="Onaylandı">Onaylandı</option>
-          <option value="İptal Edildi">İptal Edildi</option>
-        </select>
-      </div>
-
-      <!-- Fatura Detayları Düzenleme -->
       <h2>Fatura Detayları</h2>
       <div
         v-for="(detail, index) in invoice.invoiceDetails"
@@ -56,7 +40,19 @@
 
         <label>Birim Fiyat:</label>
         <input type="number" v-model="detail.unitPrice" required />
+
+        <button
+          type="button"
+          class="btn btn-danger"
+          @click="removeDetail(index)"
+        >
+          Ürünü Kaldır
+        </button>
       </div>
+
+      <button type="button" class="btn btn-secondary" @click="addDetail">
+        Yeni Ürün Ekle
+      </button>
 
       <button type="submit" class="btn btn-success">Faturayı Güncelle</button>
     </form>
@@ -83,7 +79,9 @@ export default {
       get() {
         if (!invoice.value.invoiceDate) return "";
         const date = new Date(invoice.value.invoiceDate);
-        return date.toISOString().slice(0, 16);
+        return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+          .toISOString()
+          .slice(0, 16);
       },
       set(value) {
         invoice.value.invoiceDate = new Date(value).toISOString();
@@ -138,11 +136,25 @@ export default {
       }
     };
 
+    const addDetail = () => {
+      invoice.value.invoiceDetails.push({
+        stockID: null,
+        quantity: null,
+        unitPrice: null,
+      });
+    };
+
+    const removeDetail = (index) => {
+      invoice.value.invoiceDetails.splice(index, 1);
+    };
+
     return {
       invoice,
       customers,
       formattedInvoiceDate,
       updateInvoice,
+      addDetail,
+      removeDetail,
       errorMessage,
     };
   },
@@ -198,6 +210,18 @@ button {
 .btn-success {
   background-color: #28a745;
   color: white;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+  margin-top: 10px;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+  margin-top: 10px;
 }
 
 .error {

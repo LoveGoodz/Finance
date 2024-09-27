@@ -2,8 +2,39 @@
   <div class="invoice-list-container">
     <h1>Fatura Listesi</h1>
 
-    <!-- Eğer fatura listesi varsa tabloyu göster -->
-    <table v-if="invoices.length > 0">
+    <div>
+      <label for="companySelect">Şirket Seç:</label>
+      <select
+        id="companySelect"
+        v-model="selectedCompany"
+        @change="filterInvoices"
+      >
+        <option value="">Tüm Şirketler</option>
+        <option
+          v-for="company in companies"
+          :key="company.id"
+          :value="company.id"
+        >
+          {{ company.name }}
+        </option>
+      </select>
+    </div>
+
+    <div>
+      <label for="statusSelect">Durum Seç:</label>
+      <select
+        id="statusSelect"
+        v-model="selectedStatus"
+        @change="filterInvoices"
+      >
+        <option value="">Tüm Durumlar</option>
+        <option value="Taslak">Taslak</option>
+        <option value="Onaylandı">Onaylandı</option>
+        <option value="Reddedildi">Reddedildi</option>
+      </select>
+    </div>
+
+    <table v-if="filteredInvoices.length > 0">
       <thead>
         <tr>
           <th>ID</th>
@@ -16,13 +47,13 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="invoice in invoices" :key="invoice.id">
+        <tr v-for="invoice in filteredInvoices" :key="invoice.id">
           <td>{{ invoice.id }}</td>
           <td>{{ formatDate(invoice.invoiceDate) }}</td>
           <td>{{ invoice.series }}</td>
           <td>{{ invoice.customerName || "Müşteri bilgisi yok" }}</td>
           <td>{{ invoice.totalAmount }}</td>
-          <td>{{ invoice.status }}</td>
+          <td :class="statusClass(invoice.status)">{{ invoice.status }}</td>
           <td>
             <button @click="viewInvoice(invoice.id)" class="btn btn-info">
               Detay
@@ -38,14 +69,13 @@
       </tbody>
     </table>
 
-    <!-- Eğer fatura listesi boşsa gösterilecek mesaj -->
-    <p v-if="invoices.length === 0">Listelenecek fatura bulunamadı.</p>
+    <p v-if="filteredInvoices.length === 0">Listelenecek fatura bulunamadı.</p>
   </div>
 </template>
 
 <script>
 import { useStore } from "vuex";
-import { computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 
 export default {
@@ -53,9 +83,19 @@ export default {
     const store = useStore();
     const router = useRouter();
     const invoices = computed(() => store.getters.getInvoices);
+    const companies = computed(() => store.getters.getCompanies);
+
+    const selectedCompany = ref("");
+    const selectedStatus = ref("");
+    const filteredInvoices = ref([]);
+
+    watch([selectedCompany, selectedStatus, invoices], filterInvoices, {
+      immediate: true,
+    });
 
     onMounted(() => {
       store.dispatch("fetchInvoices");
+      store.dispatch("fetchCompanies");
     });
 
     const viewInvoice = (id) => {
@@ -70,6 +110,7 @@ export default {
       if (confirm("Faturayı silmek istediğinizden emin misiniz?")) {
         await store.dispatch("deleteInvoice", id);
         alert("Fatura başarıyla silindi.");
+        filterInvoices();
       }
     };
 
@@ -84,12 +125,36 @@ export default {
       return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
     };
 
+    function filterInvoices() {
+      filteredInvoices.value = invoices.value.filter((invoice) => {
+        const matchesCompany = selectedCompany.value
+          ? invoice.companyID === parseInt(selectedCompany.value)
+          : true;
+        const matchesStatus = selectedStatus.value
+          ? invoice.status === selectedStatus.value
+          : true;
+        return matchesCompany && matchesStatus;
+      });
+    }
+
+    const statusClass = (status) => {
+      if (status === "Onaylandı") return "status-approved";
+      if (status === "Taslak") return "status-draft";
+      return "status-rejected";
+    };
+
     return {
       invoices,
+      companies,
+      selectedCompany,
+      selectedStatus,
+      filteredInvoices,
       viewInvoice,
       editInvoice,
       deleteInvoice,
       formatDate,
+      filterInvoices,
+      statusClass,
     };
   },
 };
@@ -121,9 +186,10 @@ td {
   color: #cc5500;
   font-weight: bold;
 }
-.error {
-  color: red;
-  margin-top: 1rem;
+select {
+  margin-bottom: 20px;
+  padding: 10px;
+  font-size: 1rem;
 }
 .btn {
   padding: 8px 16px;
@@ -146,5 +212,14 @@ td {
 }
 .btn:hover {
   opacity: 0.9;
+}
+.status-draft {
+  color: #ffcc00;
+}
+.status-approved {
+  color: green;
+}
+.status-rejected {
+  color: red;
 }
 </style>
